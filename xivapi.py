@@ -52,24 +52,19 @@ def get_recipe_ingredients(recipe_id: int) -> list[Item]:
     for ingredient in ingredients_json:
         if ingredient["value"] <= 0:
             continue
-        print(f"Found ingredient {ingredient}")
         item_ingredient = ItemBase(ingredient["fields"]["Name"], ingredient["value"])
         ingredients.append(item_ingredient)
     return ingredients
 
 def get_full_item_info(item: Item) -> CraftableItem | Item:
     if is_craftable(item):
-        print(f"Craftable item {item.name} found")
         recipe_id = get_item_recipe_id(item)
-        print(f"{item.name} recipe ID: {recipe_id}")
         ingredients = get_recipe_ingredients(recipe_id)
-        print("DUCK")
         ingredients = [get_full_item_info(ing) for ing in ingredients]
         craft_info = CraftInfo(recipe_id, ingredients)
         craftable_item = CraftableItem(item, craft_info)
         return craftable_item
     else:
-        print(f"Non-craftable item {item.name} found")
         return item
 
 def get_top_item_info(name: str) -> CraftableItem:
