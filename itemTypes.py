@@ -35,6 +35,7 @@ class Item:
     gatherable: GatheringInfo | None = None
     marketable: MarketInfo | None = None
 
+
 def is_craftable(item: Item) -> bool:
     if item.craftable:
         return True

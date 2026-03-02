@@ -72,6 +72,23 @@ def get_top_item_info(item_name: str) -> Craftable:
         raise TypeError(f"{item_name} is not a craftable")
     return item
 
-print(get_top_item_info("Darksteel Mitt Gauntlets"))
+print(get_full_item_data("Fire Shard"))
+print(get_full_item_data("Water Shard"))
+print(get_full_item_data("Wind Shard"))
+print(get_full_item_data("Earth Shard"))
+print(get_full_item_data("Ice Shard"))
+print(get_full_item_data("Lightning Shard"))
 
+print(get_full_item_data("Fire Crystal"))
+print(get_full_item_data("Water Crystal"))
+print(get_full_item_data("Wind Crystal"))
+print(get_full_item_data("Earth Crystal"))
+print(get_full_item_data("Ice Crystal"))
+print(get_full_item_data("Lightning Crystal"))
 
+print(get_full_item_data("Fire Cluster"))
+print(get_full_item_data("Water Cluster"))
+print(get_full_item_data("Wind Cluster"))
+print(get_full_item_data("Earth Cluster"))
+print(get_full_item_data("Ice Cluster"))
+print(get_full_item_data("Lightning Cluster"))
