@@ -1,42 +1,54 @@
-import json
+from __future__ import annotations
 from typing import Protocol
+from dataclasses import dataclass
 
-class Item(Protocol):
-    name: str
-    id: int
+
+@dataclass
+class CraftingInfo:
+    recipe_id: int
+    ingredients: list[Item]
 
 class Craftable(Protocol):
-    recipe_id: int
-    ingredients: list
+    craftable: CraftingInfo
 
-class ItemBase:
-    def __init__(self, name: str, item_id: int):
-        self.name = name
-        self.id = item_id
+@dataclass
+class GatheringInfo:
+    is_gatherable: bool
 
-    def __repr__(self):
-        return json.dumps(self.__dict__, indent=4, cls=SmartEncoder)
+class Gatherable(Protocol):
+    gatherable: GatheringInfo
 
-class CraftInfo:
-    def __init__(self, recipe: int, ingredients: list[Item]):
-        self.recipe_id = recipe
-        self.ingredients = ingredients
+@dataclass
+class MarketInfo:
+    price: int
+    server: str
+    price_dynamics: float
 
-    def __repr__(self):
-        return json.dumps(self.__dict__, indent=4, cls=SmartEncoder)
+class Marketable(Protocol):
+    marketable: MarketInfo
 
-class CraftableItem:
-    def __init__(self, item: Item, craftable: Craftable):
-        self.name = item.name
-        self.id = item.id
-        self.recipe_id = craftable.recipe_id
-        self.ingredients = craftable.ingredients
+@dataclass
+class Item:
+    name: str
+    id: int
+    craftable: CraftingInfo | None = None
+    gatherable: GatheringInfo | None = None
+    marketable: MarketInfo | None = None
 
-    def __repr__(self):
-        return json.dumps(self.__dict__, indent=4, cls=SmartEncoder)
+def is_craftable(item: Item) -> bool:
+    if item.craftable:
+        return True
+    else:
+        return False
 
-class SmartEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if hasattr(obj, "__dict__"):
-            return obj.__dict__
-        return super().default(obj)
+def is_gatherable(item: Item) -> bool:
+    if item.gatherable:
+        return True
+    else:
+        return False
+
+def is_marketable(item: Item) -> bool:
+    if item.marketable:
+        return True
+    else:
+        return False
