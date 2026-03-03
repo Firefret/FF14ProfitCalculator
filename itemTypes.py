@@ -20,6 +20,7 @@ class Gatherable(Protocol):
 
 @dataclass
 class MarketInfo:
+    __is_tradable__: bool
     price: int
     server: str
     price_dynamics: float
