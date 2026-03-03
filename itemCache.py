@@ -30,7 +30,7 @@ def get_cached_item(name: str) -> Item | bool:
 
 def cache_item(item: Item) -> bool:
     if item.name not in item_cache:
-        item_cache[item.name] = Item
+        item_cache[item.name] = item
         return True
     else:
         return False

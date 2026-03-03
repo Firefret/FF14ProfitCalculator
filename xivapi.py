@@ -1,5 +1,6 @@
 from gameServer import GameServer
 from itemRequest import ItemRequest
+from itemCache import *
 from itemTypes import *
 import requests
 
@@ -54,6 +55,9 @@ def get_recipe_ingredients(recipe_id: int) -> list[Item]:
     return ingredients
 
 def get_full_item_data(item_name: str) -> Item | Craftable: #will be expanded
+    cached_item = get_cached_item(item_name)
+    if cached_item:
+        return cached_item
     item = get_item_base(item_name)
     print(f"Retrieving {item.name}. id: {item.id}")
     if get_craftability(item):
@@ -62,6 +66,7 @@ def get_full_item_data(item_name: str) -> Item | Craftable: #will be expanded
         ingredients = [get_full_item_data(ing.name) for ing in ingredients]
         crafting_info = CraftingInfo(recipe_id, ingredients)
         item.craftable = crafting_info # set craftable field
+    cache_item(item)
     return item
 
 def get_top_item_info(item_name: str) -> Craftable:
@@ -72,23 +77,9 @@ def get_top_item_info(item_name: str) -> Craftable:
         raise TypeError(f"{item_name} is not a craftable")
     return item
 
-print(get_full_item_data("Fire Shard"))
-print(get_full_item_data("Water Shard"))
-print(get_full_item_data("Wind Shard"))
-print(get_full_item_data("Earth Shard"))
-print(get_full_item_data("Ice Shard"))
-print(get_full_item_data("Lightning Shard"))
+# No cache: get_top_item_info("Darksteel Mitt Gauntlets") took 8.321257 seconds (some repeated nested recipes)
+# No cache: get_top_item_info("Shakshouka") took 3.873055 seconds (no nested recipes)
+# With cache: get_top_item_info("Darksteel Mitt Gauntlets") took 3.760396 seconds (some repeated nested recipes)
+# With cache: get_top_item_info("Shakshouka") took 2.946904 seconds (no nested recipes)
 
-print(get_full_item_data("Fire Crystal"))
-print(get_full_item_data("Water Crystal"))
-print(get_full_item_data("Wind Crystal"))
-print(get_full_item_data("Earth Crystal"))
-print(get_full_item_data("Ice Crystal"))
-print(get_full_item_data("Lightning Crystal"))
-
-print(get_full_item_data("Fire Cluster"))
-print(get_full_item_data("Water Cluster"))
-print(get_full_item_data("Wind Cluster"))
-print(get_full_item_data("Earth Cluster"))
-print(get_full_item_data("Ice Cluster"))
-print(get_full_item_data("Lightning Cluster"))
+print(get_top_item_info("Darksteel Mitt Gauntlets"))
