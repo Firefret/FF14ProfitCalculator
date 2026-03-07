@@ -68,8 +68,8 @@ def fetch_item_recipe_id(item: Item) -> int | bool:
         print(recipe_id)
         return recipe_id
 
-def fetch_recipe(recipe_id: int) -> tuple[list[Item], list[int], int]:
-    request_url = f"https://v2.xivapi.com/api/sheet/Recipe/{recipe_id}?fields=Ingredient[].Name,AmountIngredient,AmountResult"
+def fetch_recipe(recipe_id: int) -> tuple[list[Item], list[int], int, Crafter]:
+    request_url = f"https://v2.xivapi.com/api/sheet/Recipe/{recipe_id}?fields=Ingredient[].Name,AmountIngredient,AmountResult,CraftType.Name"
     response = requests.get(request_url)
     if response.status_code != 200:
         raise ConnectionError(f"Request failed with status code {response.status_code}")
@@ -82,7 +82,9 @@ def fetch_recipe(recipe_id: int) -> tuple[list[Item], list[int], int]:
         ingredients.append(item_ingredient)
     ingredient_amount = response.json()["fields"]["AmountIngredient"]
     item_yield = response.json()["fields"]["AmountResult"]
-    return ingredients, ingredient_amount, item_yield
+    crafter_string = response.json()["fields"]["CraftType"]["fields"]["Name"]
+    print(crafter_string)
+    return ingredients, ingredient_amount, item_yield, crafter_string
 
 
 def fetch_crafting_data(item: Item) -> CraftingData | bool:
@@ -91,7 +93,7 @@ def fetch_crafting_data(item: Item) -> CraftingData | bool:
         return False
 
     recipe_data = fetch_recipe(recipe_id)
-    crafting_data = CraftingData(recipe_id, recipe_data[2], (recipe_data[0], recipe_data[1]))
+    crafting_data = CraftingData(recipe_id, recipe_data[2], (recipe_data[0], recipe_data[1]), Crafter(recipe_data[3]))
     return crafting_data
 
 def fetch_full_item_data(item_name: str) -> Item | Craftable: #will be expanded
@@ -144,7 +146,7 @@ def fetch_top_item_data(item_name: str) -> Item | Craftable | Marketable:
 # With call optimization: fetch_top_item_data("Darksteel Mitt Gauntlets") took 3.360651 seconds
 # With call optimization: fetch_top_item_data("Shakshouka") took 2.752322 seconds
 
-
+print(fetch_top_item_data("Darksteel Mitt Gauntlets"))
 #print(fetch_is_marketable(fetch_full_item_data("Shakshouka")))
 #print(fetch_is_marketable(fetch_full_item_data("Breach Coin")))
-print(fetch_top_item_data("Darksteel Mitt Gauntlets"))
+#print(fetch_full_item_data("Gagana Egg"))

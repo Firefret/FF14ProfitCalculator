@@ -1,6 +1,18 @@
 from __future__ import annotations
 from typing import Protocol
 from dataclasses import dataclass
+from enum import Enum
+
+class Crafter(Enum):
+    BSM = "Smithing"
+    ARM = "Armorcraft"
+    ALC = "Alchemy"
+    GSM = "Goldsmithing"
+    WVR = "Clothcraft"
+    CUL = "Cooking"
+    CRP = "Woodworking"
+    LTW = "Leatherworking"
+
 
 
 @dataclass
@@ -8,6 +20,7 @@ class CraftingData:
     recipe_id: int
     item_yield: int
     ingredients: tuple[list[Item | Craftable], list[int]]
+    craft_class: Crafter
 
 class Craftable(Protocol):
     craftable: CraftingData
