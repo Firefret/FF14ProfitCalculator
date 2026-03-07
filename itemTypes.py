@@ -4,37 +4,38 @@ from dataclasses import dataclass
 
 
 @dataclass
-class CraftingInfo:
+class CraftingData:
     recipe_id: int
-    ingredients: list[Item]
+    item_yield: int
+    ingredients: tuple[list[Item | Craftable], list[int]]
 
 class Craftable(Protocol):
-    craftable: CraftingInfo
+    craftable: CraftingData
 
 @dataclass
-class GatheringInfo:
+class GatheringData:
     is_gatherable: bool
 
 class Gatherable(Protocol):
-    gatherable: GatheringInfo
+    gatherable: GatheringData
 
 @dataclass
-class MarketInfo:
-    __is_tradable__: bool
-    price: int
-    server: str
-    price_dynamics: float
+class MarketData:
+    __is_tradeable__: bool
+    price: int | None = None
+    server: str | None = None
+    price_dynamics: float | None = None
 
 class Marketable(Protocol):
-    marketable: MarketInfo
+    marketable: MarketData
 
 @dataclass
 class Item:
     name: str
     id: int
-    craftable: CraftingInfo | None = None
-    gatherable: GatheringInfo | None = None
-    marketable: MarketInfo | None = None
+    craftable: CraftingData | None = None
+    gatherable: GatheringData | None = None
+    marketable: MarketData | None = None
 
 
 def is_craftable(item: Item) -> bool:

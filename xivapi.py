@@ -55,21 +55,21 @@ def fetch_is_marketable(item: Item) -> bool:
     item_info = response.json()
     return not item_info["fields"]["IsUntradable"]
 
-
 def fetch_item_recipe_id(item: Item) -> int | bool:
     request_url = f"https://v2.xivapi.com/api/search?sheets=Recipe&query=ItemResult%3D{item.id}"
     response = requests.get(request_url)
     if response.status_code != 200:
         raise ConnectionError(f"Request failed with status code {response.status_code}")
     recipe_info = response.json()
-    recipe_id = recipe_info["results"][0]["row_id"]
     if not recipe_info["results"]:
         return False
     else:
+        recipe_id = recipe_info["results"][0]["row_id"]
+        print(recipe_id)
         return recipe_id
 
-def fetch_recipe_ingredients(recipe_id: int) -> list[Item]:
-    request_url = f"https://v2.xivapi.com/api/sheet/Recipe/{recipe_id}?fields=Ingredient[].Name"
+def fetch_recipe(recipe_id: int) -> tuple[list[Item], list[int], int]:
+    request_url = f"https://v2.xivapi.com/api/sheet/Recipe/{recipe_id}?fields=Ingredient[].Name,AmountIngredient,AmountResult"
     response = requests.get(request_url)
     if response.status_code != 200:
         raise ConnectionError(f"Request failed with status code {response.status_code}")
@@ -80,7 +80,19 @@ def fetch_recipe_ingredients(recipe_id: int) -> list[Item]:
             continue
         item_ingredient = Item(ingredient["fields"]["Name"], ingredient["value"])
         ingredients.append(item_ingredient)
-    return ingredients
+    ingredient_amount = response.json()["fields"]["AmountIngredient"]
+    item_yield = response.json()["fields"]["AmountResult"]
+    return ingredients, ingredient_amount, item_yield
+
+
+def fetch_crafting_data(item: Item) -> CraftingData | bool:
+    recipe_id = fetch_item_recipe_id(item)
+    if not recipe_id:
+        return False
+
+    recipe_data = fetch_recipe(recipe_id)
+    crafting_data = CraftingData(recipe_id, recipe_data[2], (recipe_data[0], recipe_data[1]))
+    return crafting_data
 
 def fetch_full_item_data(item_name: str) -> Item | Craftable: #will be expanded
     item = get_cached_item(item_name)
@@ -89,28 +101,39 @@ def fetch_full_item_data(item_name: str) -> Item | Craftable: #will be expanded
 
     item = fetch_item_base(item_name)
     print(f"Retrieving {item.name}. id: {item.id}")
-    recipe_id = fetch_item_recipe_id(item)
-    if recipe_id:
-        ingredients = fetch_recipe_ingredients(recipe_id)
-        ingredients = [fetch_full_item_data(ing.name) for ing in ingredients]
-        crafting_info = CraftingInfo(recipe_id, ingredients)
-        item.craftable = crafting_info  # set craftable field
+
+    # Craftability
+    crafting_data = fetch_crafting_data(item)
+    if crafting_data:
+        ingredients = [fetch_full_item_data(ing.name) for ing in crafting_data.ingredients[0]]
+        crafting_data.ingredients = (ingredients, crafting_data.ingredients[1])
+        item.craftable = crafting_data
+
+    if fetch_is_marketable(item): #Marketability
+        marketable = MarketData(True)
+        item.marketable = marketable
+
     cache_item(item)
     return item
 
 def fetch_top_item_data(item_name: str) -> Item | Craftable | Marketable:
     item = fetch_item_base(item_name)
-    recipe_id = fetch_item_recipe_id(item)
-    if recipe_id:
-        ingredients = fetch_recipe_ingredients(recipe_id)
-        ingredients = [fetch_full_item_data(ing.name) for ing in ingredients]
-        crafting_info = CraftingInfo(recipe_id, ingredients)
-        item.craftable = crafting_info  # set craftable field
 
-    if fetch_is_marketable(item):
-        item.marketable.__is_tradable__ = True
+    crafting_data = fetch_crafting_data(item)
+    if crafting_data:
+        ingredients = [fetch_full_item_data(ing.name) for ing in crafting_data.ingredients[0]]
+        crafting_data.ingredients = (ingredients, crafting_data.ingredients[1])
+        item.craftable = crafting_data
     else:
         raise TypeError(f"{item_name} is not a craftable")
+
+    if fetch_is_marketable(item):
+        marketable = MarketData(True)
+        item.marketable = marketable
+    else:
+        raise TypeError(f"{item_name} is not sellable on the marketboard")
+
+    cache_item(item) #expand upon caching later
     return item
 
 
@@ -122,5 +145,6 @@ def fetch_top_item_data(item_name: str) -> Item | Craftable | Marketable:
 # With call optimization: fetch_top_item_data("Shakshouka") took 2.752322 seconds
 
 
-
-print(fetch_is_marketable(fetch_full_item_data("Breach Coin")))
+#print(fetch_is_marketable(fetch_full_item_data("Shakshouka")))
+#print(fetch_is_marketable(fetch_full_item_data("Breach Coin")))
+print(fetch_top_item_data("Darksteel Mitt Gauntlets"))
