@@ -13,6 +13,10 @@ class Crafter(Enum):
     CRP = "Woodworking"
     LTW = "Leatherworking"
 
+class Gatherer(Enum):
+    BTN = "Botanist"
+    MIN = "Miner"
+    FSH = "Fisher"
 
 
 @dataclass
@@ -27,7 +31,7 @@ class Craftable(Protocol):
 
 @dataclass
 class GatheringData:
-    is_gatherable: bool
+    gathering_type: Gatherer
 
 class Gatherable(Protocol):
     gatherable: GatheringData
@@ -43,12 +47,22 @@ class Marketable(Protocol):
     marketable: MarketData
 
 @dataclass
+class HuntingData:
+    drops_from: list[str]
+
+class Huntable(Protocol):
+    hunting: HuntingData
+
+
+@dataclass
 class Item:
     name: str
     id: int
     craftable: CraftingData | None = None
     gatherable: GatheringData | None = None
     marketable: MarketData | None = None
+    huntable: HuntingData | None = None
+
 
 
 def is_craftable(item: Item) -> bool:
