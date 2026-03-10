@@ -49,13 +49,16 @@ def fetch_is_craftable(item: Item) -> bool:
     else:
         return True
 
-def fetch_is_marketable(item: Item) -> bool: #Not reliable
+def fetch_is_marketable(item: Item) -> bool:
     request_url = f"https://v2.xivapi.com/api/sheet/Item/{item.id}"
     response = requests.get(request_url)
     if response.status_code != 200:
         raise ConnectionError(f"Request failed with status code {response.status_code}")
     item_info = response.json()
-    return not item_info["fields"]["IsUntradable"]
+    if "isUntradable" in item_info["fields"]:
+        return not item_info["fields"]["IsUntradable"]
+    else:
+        return False
 
 def fetch_item_recipe_id(item: Item) -> int | bool:
     request_url = f"https://v2.xivapi.com/api/search?sheets=Recipe&query=ItemResult%3D{item.id}"
