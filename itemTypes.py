@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import json
 from typing import Protocol
 from dataclasses import dataclass
 from enum import Enum
@@ -53,7 +55,7 @@ class HuntingData:
 class Huntable(Protocol):
     hunting: HuntingData
 
-@dataclass
+@dataclass(frozen=True)
 class VendorListing:
     currency: Item
     cost: int
@@ -61,7 +63,10 @@ class VendorListing:
 
 @dataclass
 class VendorData:
-    listings: list[VendorListing]
+    listings: set[VendorListing]
+
+class Vendorable(Protocol):
+    vendorable: VendorData
 
 
 @dataclass
@@ -74,6 +79,9 @@ class Item:
     marketable: MarketData | None = None
     huntable: HuntingData | None = None
     vendorable: VendorData | None = None
+
+    def __hash__(self) -> int:
+        return hash(self.id)
 
 
 

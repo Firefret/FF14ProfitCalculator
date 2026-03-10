@@ -1,9 +1,12 @@
+from dataclasses import asdict
+
 import requests
 import json
 from itemTypes import *
+from xivapi import fetch_full_item_data
 
-shakshouka = Item("Shakshouka", 24280)
-dsmg = Item("'Darksteel Mitt Gauntlets", 3724)
+shakshouka = Item("Shakshouka", 24280, "https://www.garlandtools.org/files/icons/item/24280.png")
+dsmg = Item("'Darksteel Mitt Gauntlets", 3724, f"https://www.garlandtools.org/files/icons/item/3724.png")
 
 def garland_fetch_item(item: Item):
     url = f"https://www.garlandtools.org/db/doc/item/en/3/{item.id}.json"
@@ -11,9 +14,16 @@ def garland_fetch_item(item: Item):
     response.raise_for_status()
     garland_item = json.loads(response.text)
     return garland_item
-
 #print(json.dumps(garland_fetch_item(shakshouka), indent=4))
 #(json.dumps(garland_fetch_item(dsmg), indent=4))
+
+def fetch_item_name_by_id(item_id: int):
+    url = f"https://www.garlandtools.org/db/doc/item/en/3/{item_id}.json"
+    response = requests.get(url)
+    garland_item = json.loads(response.text)
+    name = garland_item["item"]["name"]
+    return name
+
 
 """
 ["node"]["type"] = 2:  tree      
@@ -56,6 +66,21 @@ def define_hunting_data(garland_item: dict) -> HuntingData | bool:
 # print(define_hunting_data(garland_fetch_item(Item("Gagana Egg", 19877))))
 
 
+def define_vendor_listings(garland_item: dict) -> VendorData | bool:
+    if "tradeShops" in garland_item["item"]:
+        shops = garland_item["item"]["tradeShops"]
+        listings = set()
+        for shop in shops:
+            shop_listings = shop["listings"]
+            for listing in shop_listings:
+                amount = listing["item"][0]["amount"]
+                currency = fetch_full_item_data(fetch_item_name_by_id(int(listing["currency"][0]["id"])))
+                cost = listing["currency"][0]["amount"]
+                vendor_listing = VendorListing(currency, cost, amount)
+                listings.add(vendor_listing)
+        return VendorData(listings)
+    return False
+
 
 def fetch_item_sources(item: Item):
     garland_item = garland_fetch_item(item)
@@ -71,3 +96,6 @@ def fetch_item_sources(item: Item):
         item.hunting = hunting_data
 
     #Vendoring
+    vendor_data = define_vendor_listings(garland_item)
+    if vendor_data:
+        item.vendorable = vendor_data

@@ -81,7 +81,7 @@ def fetch_recipe(recipe_id: int) -> tuple[list[Item], list[int], int, Crafter]:
             continue
         item_ingredient = Item(ingredient["fields"]["Name"], ingredient["value"], f"https://www.garlandtools.org/files/icons/item/{ingredient["value"]}.png")
         ingredients.append(item_ingredient)
-    ingredient_amount = response.json()["fields"]["AmountIngredient"]
+    ingredient_amount = [amount for amount in response.json()["fields"]["AmountIngredient"] if amount > 0]
     item_yield = response.json()["fields"]["AmountResult"]
     crafter_string = response.json()["fields"]["CraftType"]["fields"]["Name"]
     print(crafter_string)
@@ -112,7 +112,8 @@ def fetch_full_item_data(item_name: str) -> Item | Craftable: #will be expanded
         crafting_data.ingredients = (ingredients, crafting_data.ingredients[1])
         item.craftable = crafting_data
 
-    if fetch_is_marketable(item): #Marketability
+    # Marketability
+    if fetch_is_marketable(item):
         marketable = MarketData(True)
         item.marketable = marketable
 
@@ -147,7 +148,7 @@ def fetch_top_item_data(item_name: str) -> Item | Craftable | Marketable:
 # With call optimization: fetch_top_item_data("Darksteel Mitt Gauntlets") took 3.360651 seconds
 # With call optimization: fetch_top_item_data("Shakshouka") took 2.752322 seconds
 
-print(fetch_top_item_data("Darksteel Mitt Gauntlets"))
+#print(fetch_top_item_data("Darksteel Mitt Gauntlets"))
 #print(fetch_is_marketable(fetch_full_item_data("Shakshouka")))
 #print(fetch_is_marketable(fetch_full_item_data("Breach Coin")))
 #print(fetch_full_item_data("Gagana Egg"))
