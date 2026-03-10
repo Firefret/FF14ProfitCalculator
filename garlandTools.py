@@ -3,7 +3,6 @@ from dataclasses import asdict
 import requests
 import json
 from itemTypes import *
-from xivapi import fetch_full_item_data
 
 shakshouka = Item("Shakshouka", 24280, "https://www.garlandtools.org/files/icons/item/24280.png")
 dsmg = Item("'Darksteel Mitt Gauntlets", 3724, f"https://www.garlandtools.org/files/icons/item/3724.png")
@@ -67,6 +66,7 @@ def define_hunting_data(garland_item: dict) -> HuntingData | bool:
 
 
 def define_vendor_listings(garland_item: dict) -> VendorData | bool:
+    from xivapi import fetch_full_item_data
     if "tradeShops" in garland_item["item"]:
         shops = garland_item["item"]["tradeShops"]
         listings = set()
@@ -93,7 +93,7 @@ def fetch_item_sources(item: Item):
     #Hunting
     hunting_data = define_hunting_data(garland_item)
     if hunting_data:
-        item.hunting = hunting_data
+        item.huntable = hunting_data
 
     #Vendoring
     vendor_data = define_vendor_listings(garland_item)

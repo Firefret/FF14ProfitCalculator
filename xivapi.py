@@ -2,6 +2,7 @@ from gameServer import GameServer
 from itemRequest import ItemRequest
 from itemCache import *
 from itemTypes import *
+from garlandTools import *
 import requests
 import time
 from typing import Callable, TypeVar, Tuple, Any
@@ -48,7 +49,7 @@ def fetch_is_craftable(item: Item) -> bool:
     else:
         return True
 
-def fetch_is_marketable(item: Item) -> bool:
+def fetch_is_marketable(item: Item) -> bool: #Not reliable
     request_url = f"https://v2.xivapi.com/api/sheet/Item/{item.id}"
     response = requests.get(request_url)
     if response.status_code != 200:
@@ -117,28 +118,12 @@ def fetch_full_item_data(item_name: str) -> Item | Craftable: #will be expanded
         marketable = MarketData(True)
         item.marketable = marketable
 
+    #Sources
+    fetch_item_sources(item)
+
     cache_item(item)
     return item
 
-def fetch_top_item_data(item_name: str) -> Item | Craftable | Marketable:
-    item = fetch_item_base(item_name)
-
-    crafting_data = fetch_crafting_data(item)
-    if crafting_data:
-        ingredients = [fetch_full_item_data(ing.name) for ing in crafting_data.ingredients[0]]
-        crafting_data.ingredients = (ingredients, crafting_data.ingredients[1])
-        item.craftable = crafting_data
-    else:
-        raise TypeError(f"{item_name} is not a craftable")
-
-    if fetch_is_marketable(item):
-        marketable = MarketData(True)
-        item.marketable = marketable
-    else:
-        raise TypeError(f"{item_name} is not sellable on the marketboard")
-
-    cache_item(item) #expand upon caching later
-    return item
 
 
 # No cache: fetch_top_item_data("Darksteel Mitt Gauntlets") took 8.321257 seconds (some repeated nested recipes)
