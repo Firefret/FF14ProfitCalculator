@@ -39,22 +39,22 @@ def define_gathering_data(garland_item: dict) -> GatheringData | bool:
     else:
         return False
 
-def define_hunting_data(garland_item: dict) -> HuntingData | bool:
-    if "drops" in garland_item["item"]:
-        mobs = list(map(garland_fetch_mob_name, garland_item["item"]["drops"]))
-        hunting_data = HuntingData(mobs)
-        return hunting_data
-    return False
-
 def garland_fetch_mob_name(mob_id: str) -> str:
     url = f"https://www.garlandtools.org/db/doc/mob/en/2/{mob_id}.json"
     response = requests.get(url)
     response.raise_for_status()
     garland_item = json.loads(response.text)
     return garland_item["mob"]["name"]
-
-
 # print(garland_fetch_mob_name("65950000005692"))
+
+def define_hunting_data(garland_item: dict) -> HuntingData | bool:
+    if "drops" in garland_item["item"]:
+        mobs = list(map(garland_fetch_mob_name, garland_item["item"]["drops"]))
+        hunting_data = HuntingData(mobs)
+        return hunting_data
+    return False
+# print(define_hunting_data(garland_fetch_item(Item("Gagana Egg", 19877))))
+
 
 
 def fetch_item_sources(item: Item):

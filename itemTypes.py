@@ -53,15 +53,27 @@ class HuntingData:
 class Huntable(Protocol):
     hunting: HuntingData
 
+@dataclass
+class VendorListing:
+    currency: Item
+    cost: int
+    amount: int
+
+@dataclass
+class VendorData:
+    listings: list[VendorListing]
+
 
 @dataclass
 class Item:
     name: str
     id: int
+    icon_url: str
     craftable: CraftingData | None = None
     gatherable: GatheringData | None = None
     marketable: MarketData | None = None
     huntable: HuntingData | None = None
+    vendorable: VendorData | None = None
 
 
 

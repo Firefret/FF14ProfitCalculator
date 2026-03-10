@@ -33,7 +33,8 @@ def fetch_item_base(item_name) -> Item:
     if not item_info["results"]:
         raise ValueError(f"Could not find item with name {item_name}, please use 'Copy Item Name' in-game")
     item_id = item_info["results"][0]["row_id"]
-    item = Item(item_name, item_id)
+    icon_url = f"https://www.garlandtools.org/files/icons/item/{item_id}.png"
+    item = Item(item_name, item_id, icon_url)
     return item
 
 def fetch_is_craftable(item: Item) -> bool:
@@ -78,7 +79,7 @@ def fetch_recipe(recipe_id: int) -> tuple[list[Item], list[int], int, Crafter]:
     for ingredient in ingredients_json:
         if ingredient["value"] <= 0:
             continue
-        item_ingredient = Item(ingredient["fields"]["Name"], ingredient["value"])
+        item_ingredient = Item(ingredient["fields"]["Name"], ingredient["value"], f"https://www.garlandtools.org/files/icons/item/{ingredient["value"]}.png")
         ingredients.append(item_ingredient)
     ingredient_amount = response.json()["fields"]["AmountIngredient"]
     item_yield = response.json()["fields"]["AmountResult"]
