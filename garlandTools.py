@@ -33,19 +33,22 @@ def fetch_item_name_by_id(item_id: int):
 ["fishingSpots"].len > 0 = fishing
 """
 def define_gathering_data(garland_item: dict) -> GatheringData | bool:
-    node = next((d for d in garland_item["partials"] if d["type"] == "node"), None)
-    if node is not None:
-        if node["obj"]["t"] == 0 or node["obj"]["t"] == 1:
-            return GatheringData(Gatherer.MIN)
-        elif node["obj"]["t"] == 2 or node["obj"]["t"] == 3:
-            return GatheringData(Gatherer.BTN)
-        elif node["obj"]["t"] == 5:
+    if "partials" in garland_item:
+        node = next((d for d in garland_item["partials"] if d["type"] == "node"), None)
+        if node is not None:
+            if node["obj"]["t"] == 0 or node["obj"]["t"] == 1:
+                return GatheringData(Gatherer.MIN)
+            elif node["obj"]["t"] == 2 or node["obj"]["t"] == 3:
+                return GatheringData(Gatherer.BTN)
+            elif node["obj"]["t"] == 5:
+                return GatheringData(Gatherer.FSH)
+            else:
+                return False
+        elif "fishingSpots" in garland_item["item"]:
             return GatheringData(Gatherer.FSH)
         else:
             return False
-    elif "fishingSpots" in garland_item["item"]:
-        return GatheringData(Gatherer.FSH)
-    else:
+    else :
         return False
 
 def garland_fetch_mob_name(mob_id: str) -> str:
@@ -67,9 +70,17 @@ def define_hunting_data(garland_item: dict) -> HuntingData | bool:
 
 def define_vendor_listings(garland_item: dict) -> VendorData | bool:
     from xivapi import fetch_full_item_data
+    listings = set()
+
+    if "vendors" in garland_item["item"]:
+        amount = 1
+        currency = fetch_full_item_data("Gil")
+        cost = garland_item["item"]["price"]
+        vendor_listing = VendorListing(currency, cost, amount)
+        listings.add(vendor_listing)
+
     if "tradeShops" in garland_item["item"]:
         shops = garland_item["item"]["tradeShops"]
-        listings = set()
         for shop in shops:
             shop_listings = shop["listings"]
             for listing in shop_listings:
@@ -78,6 +89,8 @@ def define_vendor_listings(garland_item: dict) -> VendorData | bool:
                 cost = listing["currency"][0]["amount"]
                 vendor_listing = VendorListing(currency, cost, amount)
                 listings.add(vendor_listing)
+
+    if len(listings) > 0:
         return VendorData(listings)
     return False
 
