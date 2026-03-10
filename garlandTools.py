@@ -23,19 +23,19 @@ def garland_fetch_item(item: Item):
 ["node"]["type"] = 5: spearfishing
 ["fishingSpots"].len > 0 = fishing
 """
-def define_gathering_type(garland_item: dict) -> Gatherer | bool:
+def define_gathering_data(garland_item: dict) -> GatheringData | bool:
     node = next((d for d in garland_item["partials"] if d["type"] == "node"), None)
     if node is not None:
         if node["obj"]["t"] == 0 or node["obj"]["t"] == 1:
-            return Gatherer.MIN
+            return GatheringData(Gatherer.MIN)
         elif node["obj"]["t"] == 2 or node["obj"]["t"] == 3:
-            return Gatherer.BTN
+            return GatheringData(Gatherer.BTN)
         elif node["obj"]["t"] == 5:
-            return Gatherer.FSH
+            return GatheringData(Gatherer.FSH)
         else:
             return False
     elif "fishingSpots" in garland_item["item"]:
-        return Gatherer.FSH
+        return GatheringData(Gatherer.FSH)
     else:
         return False
 
@@ -61,10 +61,13 @@ def fetch_item_sources(item: Item):
     garland_item = garland_fetch_item(item)
 
     #Gathering
-    gathering_type = define_gathering_type(garland_item)
+    gathering_type = define_gathering_data(garland_item)
     if gathering_type:
-        item.gatherable = GatheringData(gathering_type)
+        item.gatherable = gathering_type
 
     #Hunting
+    hunting_data = define_hunting_data(garland_item)
+    if hunting_data:
+        item.hunting = hunting_data
 
     #Vendoring
