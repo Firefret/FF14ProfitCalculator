@@ -1,28 +1,30 @@
-from itemTypes import *
 from xivapi import *
 from garlandTools import *
+import aiohttp
+import asyncio
 
 
+async def fetch_top_item_data(item_name: str) -> Item | Craftable | Marketable:
+    async with aiohttp.ClientSession() as session:
+        item = await fetch_item_base(item_name, session)
 
-def fetch_top_item_data(item_name: str) -> Item | Craftable | Marketable:
-    item = fetch_item_base(item_name)
+        crafting_data = await fetch_crafting_data(item, session)
+        if crafting_data:
+            ingredients = await asyncio.gather(
+                *(fetch_full_item_data(ing.name, session) for ing in crafting_data.ingredients[0])
+            )
+            crafting_data.ingredients = (list(ingredients), crafting_data.ingredients[1])
+            item.craftable = crafting_data
+        else:
+            raise TypeError(f"{item_name} is not a craftable")
 
-    crafting_data = fetch_crafting_data(item)
-    if crafting_data:
-        ingredients = [fetch_full_item_data(ing.name) for ing in crafting_data.ingredients[0]]
-        crafting_data.ingredients = (ingredients, crafting_data.ingredients[1])
-        item.craftable = crafting_data
-    else:
-        raise TypeError(f"{item_name} is not a craftable")
+        if await fetch_is_marketable(item, session):
+            marketable = MarketData(True)
+            item.marketable = marketable
 
-    if fetch_is_marketable(item):
-        marketable = MarketData(True)
-        item.marketable = marketable
-    #else:
-        #raise TypeError(f"{item_name} is not sellable on the marketboard")
+        cache_item(item)
+        return item
 
-    cache_item(item) #expand upon caching later
-    return item
-
-print(fetch_top_item_data("Rarefied Tacos de Carne Asada"))
-print(fetch_top_item_data("Egg Foo Young"))
+#print(asyncio.run(fetch_top_item_data("Rarefied Tacos de Carne Asada")))
+#print(asyncio.run(fetch_top_item_data("Egg Foo Young")))
+print(asyncio.run(fetch_top_item_data("Darksteel Mitt Gauntlets")))

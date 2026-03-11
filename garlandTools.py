@@ -1,8 +1,6 @@
-from dataclasses import asdict
-
 import requests
-import json
 from itemTypes import *
+from itemCache import *
 
 shakshouka = Item("Shakshouka", 24280, "https://www.garlandtools.org/files/icons/item/24280.png")
 dsmg = Item("'Darksteel Mitt Gauntlets", 3724, f"https://www.garlandtools.org/files/icons/item/3724.png")
@@ -68,13 +66,13 @@ def define_hunting_data(garland_item: dict) -> HuntingData | bool:
 # print(define_hunting_data(garland_fetch_item(Item("Gagana Egg", 19877))))
 
 
-def define_vendor_listings(garland_item: dict) -> VendorData | bool:
+async def define_vendor_listings(garland_item: dict, session) -> VendorData | bool:
     from xivapi import fetch_full_item_data
     listings = set()
 
     if "vendors" in garland_item["item"]:
         amount = 1
-        currency = fetch_full_item_data("Gil")
+        currency = await fetch_full_item_data("Gil", session)
         cost = garland_item["item"]["price"]
         vendor_listing = VendorListing(currency, cost, amount)
         listings.add(vendor_listing)
@@ -85,7 +83,11 @@ def define_vendor_listings(garland_item: dict) -> VendorData | bool:
             shop_listings = shop["listings"]
             for listing in shop_listings:
                 amount = listing["item"][0]["amount"]
-                currency = fetch_full_item_data(fetch_item_name_by_id(int(listing["currency"][0]["id"])))
+                currency_id = int(listing["currency"][0]["id"])
+                if currency_id >= 20 & currency_id <= 22:
+                    currency = get_cached_item("Grand Company Seal")
+                else:
+                    currency = await fetch_full_item_data(fetch_item_name_by_id(currency_id), session)
                 cost = listing["currency"][0]["amount"]
                 vendor_listing = VendorListing(currency, cost, amount)
                 listings.add(vendor_listing)
@@ -95,20 +97,20 @@ def define_vendor_listings(garland_item: dict) -> VendorData | bool:
     return False
 
 
-def fetch_item_sources(item: Item):
+async def fetch_item_sources(item: Item, session):
     garland_item = garland_fetch_item(item)
 
-    #Gathering
+    # Gathering
     gathering_type = define_gathering_data(garland_item)
     if gathering_type:
         item.gatherable = gathering_type
 
-    #Hunting
+    # Hunting
     hunting_data = define_hunting_data(garland_item)
     if hunting_data:
         item.huntable = hunting_data
 
-    #Vendoring
-    vendor_data = define_vendor_listings(garland_item)
+    # Vendoring
+    vendor_data = await define_vendor_listings(garland_item, session)
     if vendor_data:
         item.vendorable = vendor_data

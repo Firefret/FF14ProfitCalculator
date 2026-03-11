@@ -1,4 +1,5 @@
 from itemTypes import *
+import asyncio
 
 item_cache = {
     "Fire Shard" : Item("Fire Shard", 2, f"https://www.garlandtools.org/files/icons/item/2.png"),
@@ -19,9 +20,11 @@ item_cache = {
     "Earth Cluster" : Item("Earth Cluster", 17, f"https://www.garlandtools.org/files/icons/item/17.png"),
     "Lightning Cluster" : Item("Lightning Cluster", 18, "https://www.garlandtools.org/files/icons/item/18.png"),
     "Water Cluster" : Item("Water Cluster", 19, f"https://www.garlandtools.org/files/icons/item/19.png"),
-    "Gil" : Item(name='Gil', id=1, icon_url='https://www.garlandtools.org/files/icons/item/1.png', craftable=None, gatherable=None, marketable=MarketData(__is_tradeable__=True, price=None, server=None, price_dynamics=None), huntable=None, vendorable=None)
+    "Gil" : Item(name='Gil', id=1, icon_url='https://www.garlandtools.org/files/icons/item/1.png', craftable=None, gatherable=None, marketable=MarketData(__is_tradeable__=True, price=None, server=None, price_dynamics=None), huntable=None, vendorable=None),
+    "Grand Company Seal": Item("Grand Company Seal", 20, 'https://www.garlandtools.org/files/icons/item/20.png')
 }
 
+in_flight: dict[str, asyncio.Task] = {}
 
 def get_cached_item(name: str) -> Item | bool:
     if name in item_cache:
