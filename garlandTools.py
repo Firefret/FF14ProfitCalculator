@@ -30,7 +30,7 @@ def fetch_item_name_by_id(item_id: int):
 ["node"]["type"] = 5: spearfishing
 ["fishingSpots"].len > 0 = fishing
 """
-def define_gathering_data(garland_item: dict) -> GatheringData | bool:
+def resolve_gathering_data(garland_item: dict) -> GatheringData | bool:
     if "partials" in garland_item:
         node = next((d for d in garland_item["partials"] if d["type"] == "node"), None)
         if node is not None:
@@ -57,7 +57,7 @@ def garland_fetch_mob_name(mob_id: str) -> str:
     return garland_item["mob"]["name"]
 # print(garland_fetch_mob_name("65950000005692"))
 
-def define_hunting_data(garland_item: dict) -> HuntingData | bool:
+def resolve_hunting_data(garland_item: dict) -> HuntingData | bool:
     if "drops" in garland_item["item"]:
         mobs = list(map(garland_fetch_mob_name, garland_item["item"]["drops"]))
         hunting_data = HuntingData(mobs)
@@ -66,7 +66,7 @@ def define_hunting_data(garland_item: dict) -> HuntingData | bool:
 # print(define_hunting_data(garland_fetch_item(Item("Gagana Egg", 19877))))
 
 
-async def define_vendor_listings(garland_item: dict, session) -> VendorData | bool:
+async def resolve_vendor_listings(garland_item: dict, session) -> VendorData | bool:
     from xivapi import fetch_full_item_data
     listings = set()
 
@@ -103,7 +103,7 @@ async def define_vendor_listings(garland_item: dict, session) -> VendorData | bo
         return VendorData(listings)
     return False
 
-def define_icon_url(garland_item: dict) -> str:
+def resolve_icon_url(garland_item: dict) -> str:
     return f"https://www.garlandtools.org/files/icons/item/{garland_item["item"]["icon"]}.png"
 
 
@@ -111,19 +111,19 @@ async def fetch_item_sources(item: Item, session):
     garland_item = garland_fetch_item(item)
 
     #Icon
-    item.icon_url = define_icon_url(garland_item)
+    item.icon_url = resolve_icon_url(garland_item)
 
     # Gathering
-    gathering_type = define_gathering_data(garland_item)
+    gathering_type = resolve_gathering_data(garland_item)
     if gathering_type:
         item.gatherable = gathering_type
 
     # Hunting
-    hunting_data = define_hunting_data(garland_item)
+    hunting_data = resolve_hunting_data(garland_item)
     if hunting_data:
         item.huntable = hunting_data
 
     # Vendoring
-    vendor_data = await define_vendor_listings(garland_item, session)
+    vendor_data = await resolve_vendor_listings(garland_item, session)
     if vendor_data:
         item.vendorable = vendor_data

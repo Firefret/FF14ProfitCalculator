@@ -71,7 +71,7 @@ async def fetch_recipe(recipe_id: int, session: aiohttp.ClientSession) -> tuple[
     for ingredient in ingredients_json:
         if ingredient["value"] <= 0:
             continue
-        item_ingredient = Item(ingredient["fields"]["Name"], ingredient["value"], f"https://www.garlandtools.org/files/icons/item/{ingredient['value']}.png")
+        item_ingredient = Item(ingredient["fields"]["Name"], ingredient["value"])
         ingredients.append(item_ingredient)
     ingredient_amount = [amount for amount in data["fields"]["AmountIngredient"] if amount > 0]
     item_yield = data["fields"]["AmountResult"]
