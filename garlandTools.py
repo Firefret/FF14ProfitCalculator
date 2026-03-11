@@ -1,4 +1,5 @@
 import requests
+import asyncio
 from itemCache import *
 
 shakshouka = Item("Shakshouka", 24280, "https://www.garlandtools.org/files/icons/item/24280.png")
@@ -73,25 +74,30 @@ async def define_vendor_listings(garland_item: dict, session) -> VendorData | bo
         amount = 1
         currency = await fetch_full_item_data("Gil", session)
         cost = garland_item["item"]["price"]
-        vendor_listing = VendorListing(currency, cost, amount)
-        listings.add(vendor_listing)
+        listings.add(VendorListing(currency, cost, amount))
 
     if "tradeShops" in garland_item["item"]:
         shops = garland_item["item"]["tradeShops"]
+
+        # Collect all listing metadata first
+        pending = []
         for shop in shops:
-            shop_listings = shop["listings"]
-            for listing in shop_listings:
+            for listing in shop["listings"]:
                 amount = listing["item"][0]["amount"]
-                currency_id = int(listing["currency"][0]["id"])
-                print(f"currency_id: {currency_id}")
-                if 20 <= currency_id <= 22:
-                    print(f"found company seal: id {currency_id}")
-                    currency = get_cached_item("Grand Company Seal")
-                else:
-                    currency = await fetch_full_item_data(fetch_item_name_by_id(currency_id), session)
                 cost = listing["currency"][0]["amount"]
-                vendor_listing = VendorListing(currency, cost, amount)
-                listings.add(vendor_listing)
+                currency_id = int(listing["currency"][0]["id"])
+                pending.append((amount, cost, currency_id))
+
+        # Resolve all currencies concurrently
+        async def resolve_currency(currency_id: int):
+            if 20 <= currency_id <= 22:
+                return get_cached_item("Grand Company Seal")
+            return await fetch_full_item_data(fetch_item_name_by_id(currency_id), session)
+
+        currencies = await asyncio.gather(*(resolve_currency(currency_id) for _, _, currency_id in pending))
+
+        for (amount, cost, _), currency in zip(pending, currencies):
+            listings.add(VendorListing(currency, cost, amount))
 
     if len(listings) > 0:
         return VendorData(listings)

@@ -2,7 +2,7 @@ from xivapi import *
 from garlandTools import *
 import aiohttp
 import asyncio
-
+import time
 
 async def fetch_top_item_data(item_name: str) -> Item | Craftable | Marketable:
     async with aiohttp.ClientSession() as session:
@@ -25,6 +25,12 @@ async def fetch_top_item_data(item_name: str) -> Item | Craftable | Marketable:
         cache_item(item)
         return item
 
-print(asyncio.run(fetch_top_item_data("Rarefied Tacos de Carne Asada")))
-print(asyncio.run(fetch_top_item_data("Egg Foo Young")))
-print(asyncio.run(fetch_top_item_data("Darksteel Mitt Gauntlets")))
+def timed_fetch(item_name: str) -> Item | Craftable | Marketable:
+    start = time.perf_counter()
+    result = asyncio.run(fetch_top_item_data(item_name))
+    elapsed = time.perf_counter() - start
+    print(f"fetch_top_item_data({item_name!r}) took {elapsed:.3f}s")
+    return result
+
+print(timed_fetch("Shakshouka")) #fetch_top_item_data('Shakshouka') took 2.783s
+print(timed_fetch("Darksteel Mitt Gauntlets")) #fetch_top_item_data('Darksteel Mitt Gauntlets') took 2.477s
