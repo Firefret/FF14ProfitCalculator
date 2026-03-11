@@ -83,7 +83,9 @@ async def define_vendor_listings(garland_item: dict, session) -> VendorData | bo
             for listing in shop_listings:
                 amount = listing["item"][0]["amount"]
                 currency_id = int(listing["currency"][0]["id"])
-                if currency_id >= 20 & currency_id <= 22:
+                print(f"currency_id: {currency_id}")
+                if 20 <= currency_id <= 22:
+                    print(f"found company seal: id {currency_id}")
                     currency = get_cached_item("Grand Company Seal")
                 else:
                     currency = await fetch_full_item_data(fetch_item_name_by_id(currency_id), session)
