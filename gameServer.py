@@ -1,7 +1,6 @@
 
 class GameServer:
-    def __init__(self, region, dc, world):
-        self.region = region
+    def __init__(self, dc, world):
         self.dc = dc
         self.world = world
 

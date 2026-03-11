@@ -73,7 +73,7 @@ class Vendorable(Protocol):
 class Item:
     name: str
     id: int
-    icon_url: str
+    icon_url: str | None = None
     craftable: CraftingData | None = None
     gatherable: GatheringData | None = None
     marketable: MarketData | None = None

@@ -25,6 +25,6 @@ async def fetch_top_item_data(item_name: str) -> Item | Craftable | Marketable:
         cache_item(item)
         return item
 
-#print(asyncio.run(fetch_top_item_data("Rarefied Tacos de Carne Asada")))
-#print(asyncio.run(fetch_top_item_data("Egg Foo Young")))
+print(asyncio.run(fetch_top_item_data("Rarefied Tacos de Carne Asada")))
+print(asyncio.run(fetch_top_item_data("Egg Foo Young")))
 print(asyncio.run(fetch_top_item_data("Darksteel Mitt Gauntlets")))

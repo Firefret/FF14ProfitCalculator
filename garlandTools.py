@@ -1,5 +1,4 @@
 import requests
-from itemTypes import *
 from itemCache import *
 
 shakshouka = Item("Shakshouka", 24280, "https://www.garlandtools.org/files/icons/item/24280.png")
@@ -96,9 +95,15 @@ async def define_vendor_listings(garland_item: dict, session) -> VendorData | bo
         return VendorData(listings)
     return False
 
+def define_icon_url(garland_item: dict) -> str:
+    return f"https://www.garlandtools.org/files/icons/item/{garland_item["item"]["icon"]}.png"
+
 
 async def fetch_item_sources(item: Item, session):
     garland_item = garland_fetch_item(item)
+
+    #Icon
+    item.icon_url = define_icon_url(garland_item)
 
     # Gathering
     gathering_type = define_gathering_data(garland_item)

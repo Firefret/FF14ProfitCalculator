@@ -10,7 +10,7 @@ from typing import TypeVar
 T = TypeVar("T")
 
 
-game_server = GameServer("EU", "Light", "Raiden")
+game_server = GameServer("Light", "Raiden")
 item_request = ItemRequest(game_server, "Darksteel Mitt Gauntlets", 10)
 
 async def fetch_item_base(item_name, session: aiohttp.ClientSession) -> Item:
@@ -22,8 +22,7 @@ async def fetch_item_base(item_name, session: aiohttp.ClientSession) -> Item:
     if not item_info["results"]:
         raise ValueError(f"Could not find item with name {item_name}, please use 'Copy Item Name' in-game")
     item_id = item_info["results"][0]["row_id"]
-    icon_url = f"https://www.garlandtools.org/files/icons/item/{item_id}.png"
-    item = Item(item_name, item_id, icon_url)
+    item = Item(item_name, item_id)
     return item
 
 async def fetch_is_craftable(item: Item, session: aiohttp.ClientSession) -> bool:
