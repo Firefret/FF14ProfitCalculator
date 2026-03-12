@@ -1,6 +1,4 @@
-from gameServer import GameServer
 from itemRequest import ItemRequest
-from itemCache import *
 from garlandTools import *
 import aiohttp
 import asyncio
@@ -89,7 +87,7 @@ async def fetch_crafting_data(item: Item, session: aiohttp.ClientSession) -> Cra
     crafting_data = CraftingData(recipe_id, recipe_data[2], (recipe_data[0], recipe_data[1]), Crafter(recipe_data[3]))
     return crafting_data
 
-async def _do_fetch_full_item_data(item_name: str, session: aiohttp.ClientSession) -> Item | Craftable:
+async def populate_item_data(item_name: str, server: GameServer, session: aiohttp.ClientSession) -> Item | Craftable:
     item = await fetch_item_base(item_name, session)
     print(f"Retrieving {item.name}. id: {item.id}")
 
@@ -97,36 +95,30 @@ async def _do_fetch_full_item_data(item_name: str, session: aiohttp.ClientSessio
     crafting_data = await fetch_crafting_data(item, session)
     if crafting_data:
         ingredients = await asyncio.gather(
-            *(fetch_full_item_data(ing.name, session) for ing in crafting_data.ingredients[0])
+            *(fetch_full_item_data(ing.name, server, session) for ing in crafting_data.ingredients[0])
         )
         crafting_data.ingredients = (list(ingredients), crafting_data.ingredients[1])
         item.craftable = crafting_data
 
-    # Marketability
-    if await fetch_is_marketable(item, session):
-        marketable = MarketData(True)
-        item.marketable = marketable
-
-    # Sources
-    await fetch_item_sources(item, session)
-
+    # Sources, tradeability, icon
+    item = await fetch_and_apply_garland_data(item, server, session)
     cache_item(item)
     return item
 
-async def fetch_full_item_data(item_name: str, session: aiohttp.ClientSession) -> Item | Craftable:
+async def fetch_full_item_data(item_name: str, server: GameServer, session: aiohttp.ClientSession) -> Item | Craftable:
     # 1. Already fully fetched and cached
     item = get_cached_item(item_name)
     if item:
         return item
 
-    # 2. Already being fetched — reuse the running task
-    if item_name in in_flight:
-        return await in_flight[item_name]
+    # 2. Already being fetched - subscribe to the task
+    if item_name in being_fetched:
+        return await being_fetched[item_name]
 
     # 3. Start a new fetch and register it so others can join it
-    task = asyncio.ensure_future(_do_fetch_full_item_data(item_name, session))
-    in_flight[item_name] = task
+    task = asyncio.ensure_future(populate_item_data(item_name, server, session))
+    being_fetched[item_name] = task
     try:
         return await task
     finally:
-        await in_flight.pop(item_name, None)
+        await being_fetched.pop(item_name, None)

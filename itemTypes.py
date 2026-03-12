@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import json
 from typing import Protocol
 from dataclasses import dataclass
 from enum import Enum
@@ -41,8 +39,8 @@ class Gatherable(Protocol):
 @dataclass
 class MarketData:
     __is_tradeable__: bool
-    price: int | None = None
-    server: str | None = None
+    avg_buying_price: int | None = None #for visual purposes only, all the None fields are populated las, when universalis data is processed
+    dc: str | None = None
     price_dynamics: float | None = None
 
 class Marketable(Protocol):
