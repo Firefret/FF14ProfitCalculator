@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Protocol
 from dataclasses import dataclass
 from enum import Enum
+from gameServer import GameServer
 
 class Crafter(Enum):
     BSM = "Smithing"
@@ -37,12 +38,17 @@ class Gatherable(Protocol):
     gatherable: GatheringData
 
 @dataclass
+class SalesData:
+    avg_buying_price: int | None = None #for visual purposes only, all the None fields are populated las, when universalis data is processed
+    price_dynamics: float | None = None
+    selling_velocity: float | None = None
+
+@dataclass
 class MarketData:
     __is_tradeable__: bool
-    avg_buying_price: int | None = None #for visual purposes only, all the None fields are populated las, when universalis data is processed
-    dc: str | None = None
-    price_dynamics: float | None = None
-    hq: MarketData | None = None
+    dc: GameServer | None = None
+    NQ: SalesData | None = None
+    HQ: SalesData | None = None
 
 class Marketable(Protocol):
     marketable: MarketData
