@@ -4,6 +4,7 @@ from itemRequest import *
 import aiohttp
 import asyncio
 import time
+from universalis import *
 
 test_server = GameServer("Light", "Raiden")
 
@@ -22,6 +23,7 @@ async def fetch_top_item_data(item_name: str, server: GameServer) -> Item | Craf
 
         # Sources
         item = await fetch_and_apply_garland_data(item, server, session)
+        item.marketable = await fetch_item_market_data(item, server, session)
         cache_item(item)
         return item
 
@@ -34,5 +36,5 @@ def timed_fetch(item_name: str) -> Item | Craftable | Marketable:
 
 
 
-print(timed_fetch("Shakshouka")) #fetch_top_item_data('Shakshouka') took 2.783 s
-print(timed_fetch("Darksteel Mitt Gauntlets")) #fetch_top_item_data('Darksteel Mitt Gauntlets') took 2.477s
+#print(timed_fetch("Shakshouka")) #fetch_top_item_data('Shakshouka') took 2.783 s
+print(timed_fetch("Darksteel Ingot")) #fetch_top_item_data('Darksteel Mitt Gauntlets') took 2.477s

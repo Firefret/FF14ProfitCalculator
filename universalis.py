@@ -39,9 +39,9 @@ def calculate_price_dynamics(sale_data) -> float:
 
     sale_period = sale_period_end - sale_period_start
 
-    price_difference = sale_data[0]["pricePerUnit"] - sale_data[-1]["pricePerUnit"]  # 7000 - 5000 = 2000
+    price_difference = sale_data[0]["price"] - sale_data[-1]["price"]  # 7000 - 5000 = 2000
     gil_dynamics_per_day = price_difference / sale_period.days  # 2000 / 8 = 250
-    percent = sale_data[-1]["pricePerUnit"] / 100  # 7000 / 100 = 70
+    percent = sale_data[-1]["price"] / 100  # 7000 / 100 = 70
     percent_dynamics_per_day = round(gil_dynamics_per_day / percent, 2)
     return percent_dynamics_per_day
 
@@ -56,13 +56,13 @@ def analyze_sale_info(sale_info: dict):
     if nq_data:
         nq_dynamics = calculate_price_dynamics(nq_data)
         nq_sale_velocity = sale_info["nqSaleVelocity"]
-        nq_last_sale_price = nq_data[0]["pricePerUnit"]
+        nq_last_sale_price = nq_data[0]["price"]
         nq_market_data = SalesData(nq_last_sale_price, nq_dynamics, nq_sale_velocity)
 
     if hq_data:
         hq_dynamics = calculate_price_dynamics(hq_data)
         hq_sale_velocity = sale_info["hqSaleVelocity"]
-        hq_last_sale_price = hq_data[0]["pricePerUnit"]
+        hq_last_sale_price = hq_data[0]["price"]
         hq_market_data = SalesData(hq_last_sale_price, hq_dynamics, hq_sale_velocity)
 
     return nq_market_data, hq_market_data
