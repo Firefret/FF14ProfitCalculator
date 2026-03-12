@@ -42,6 +42,7 @@ class MarketData:
     avg_buying_price: int | None = None #for visual purposes only, all the None fields are populated las, when universalis data is processed
     dc: str | None = None
     price_dynamics: float | None = None
+    hq: MarketData | None = None
 
 class Marketable(Protocol):
     marketable: MarketData
