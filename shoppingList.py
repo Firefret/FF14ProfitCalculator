@@ -1,9 +1,17 @@
 from itemTypes import *
 
 @dataclass
+class SourceFlags:
+    is_craftable: bool
+    is_vendorable: bool
+    is_gatherable: bool
+    is_marketable: bool
+
+@dataclass
 class Material:
     item: Item
     amount: int
+    flags: SourceFlags
 
 @dataclass
 class ShoppingList: #let it know about the game server somehow

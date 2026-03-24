@@ -1,7 +1,9 @@
+from shoppingList import ShoppingList
 from xivapi import *
 from garlandTools import *
 from itemRequest import *
 from craftingList import *
+from shoppingList import *
 import aiohttp
 import asyncio
 import time
@@ -31,10 +33,21 @@ async def fetch_top_item_data(item_name: str, server: GameServer) -> Item | Craf
         return item
 
 
-async def handle_item_request(request: ItemRequest):
+async def add_request_to_crafting_list(request: ItemRequest):
     item = await fetch_top_item_data(request.item_name, request.server)
     crafting_list_entry = CraftingListEntry(item, request.quantity)
     crafting_list.add(crafting_list_entry)
+
+def recursive_mat_sweep(item: Item):
+    if item is Craftable:
+        for ingredient in item.craftable.ingredients[0]:
+            recursive_mat_sweep(ingredient)
+    else:
+        return item
+
+def form_shopping_list(crafting_list: CraftingList) -> ShoppingList:
+    for entry in crafting_list.items:
+
 
 
 def timed_fetch(item_name: str) -> Item | Craftable | Marketable:
