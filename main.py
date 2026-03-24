@@ -1,12 +1,15 @@
 from xivapi import *
 from garlandTools import *
 from itemRequest import *
+from craftingList import *
 import aiohttp
 import asyncio
 import time
 from universalis import *
 
 test_server = GameServer("Light", "Raiden")
+test_request = ItemRequest("Raiden", "Darksteel Mitt Gauntlets", 3)
+crafting_list = CraftingList()
 
 async def fetch_top_item_data(item_name: str, server: GameServer) -> Item | Craftable | Marketable:
     async with aiohttp.ClientSession() as session:
@@ -26,6 +29,13 @@ async def fetch_top_item_data(item_name: str, server: GameServer) -> Item | Craf
         item.marketable = await fetch_item_market_data(item, server, session)
         cache_item(item)
         return item
+
+
+async def handle_item_request(request: ItemRequest):
+    item = await fetch_top_item_data(request.item_name, request.server)
+    crafting_list_entry = CraftingListEntry(item, request.quantity)
+    crafting_list.add(crafting_list_entry)
+
 
 def timed_fetch(item_name: str) -> Item | Craftable | Marketable:
     start = time.perf_counter()
