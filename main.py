@@ -38,12 +38,12 @@ async def add_request_to_crafting_list(request: ItemRequest):
     crafting_list_entry = CraftingListEntry(item, request.quantity)
     crafting_list.add(crafting_list_entry)
 
-def recursive_mat_sweep(item: Item):
+def recursive_mat_sweep(item: Item, amount: int):
     if item is Craftable:
-        for ingredient in item.craftable.ingredients[0]:
-            recursive_mat_sweep(ingredient)
-    else:
-        return item
+        for index, ingredient in enumerate(item.craftable.ingredients[0]):
+            recursive_mat_sweep(ingredient, amount*item.craftable.ingredients[1][index])
+    mat = Material(item, amount)
+    return mat
 
 def form_shopping_list(crafting_list: CraftingList) -> ShoppingList:
     for entry in crafting_list.items:
