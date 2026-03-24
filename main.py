@@ -42,7 +42,8 @@ def get_material_flags_from_item(item) -> SourceFlags:
     flags = SourceFlags(craftable = True if isinstance(item, Craftable) else False,
                         vendotable = True if isinstance(item, Vendorable) else False,
                         gatherable = True if isinstance(item, Gatherable) else False,
-                        marketable = item.marketable.__is_tradeable__ ) #really gotta get rid of that quirk at some point
+                        huntable = True if isinstance(item, Huntable) else False,
+                        marketable = True if isinstance(item, Marketable) else False)
 
     return flags
 

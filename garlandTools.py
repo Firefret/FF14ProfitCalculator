@@ -148,7 +148,6 @@ def apply_garland_data(item: Item, garland_data: dict):
         item.huntable = garland_data["hunting"]
     if garland_data["vendors"]:
         item.vendorable = garland_data["vendors"]
-    item.marketable = MarketData(garland_data["is_tradeable"])
     return item
 
 async def fetch_and_apply_garland_data(item: Item, server: GameServer, session):

@@ -71,7 +71,7 @@ async def fetch_item_market_data(item: Item, server: GameServer, session: aiohtt
     sale_info = await fetch_item_sale_history_month(item, server, session)
     nq_market_data, hq_market_data, = analyze_sale_info(sale_info)
 
-    return MarketData(True, server, nq_market_data, hq_market_data)
+    return MarketData(server, nq_market_data, hq_market_data)
 
 
 

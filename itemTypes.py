@@ -45,7 +45,6 @@ class SalesData:
 
 @dataclass
 class MarketData:
-    __is_tradeable__: bool
     dc: GameServer | None = None
     NQ: SalesData | None = None
     HQ: SalesData | None = None

@@ -5,6 +5,7 @@ class SourceFlags:
     is_craftable: bool
     is_vendorable: bool
     is_gatherable: bool
+    is_huntable: bool
     is_marketable: bool
 
 @dataclass

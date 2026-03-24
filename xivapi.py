@@ -100,7 +100,7 @@ async def populate_item_data(item_name: str, server: GameServer, session: aiohtt
         crafting_data.ingredients = (list(ingredients), crafting_data.ingredients[1])
         item.craftable = crafting_data
 
-    # Sources, tradeability, icon
+    # Gatherability, Vendorability, Huntability, icon
     item = await fetch_and_apply_garland_data(item, server, session)
     cache_item(item)
     return item
