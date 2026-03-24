@@ -26,8 +26,9 @@ async def fetch_top_item_data(item_name: str, server: GameServer) -> Item | Craf
             crafting_data.ingredients = (list(ingredients), crafting_data.ingredients[1])
             item.craftable = crafting_data
 
-        # Sources
+        # Gatherability, Vendorability, Huntability, Icon
         item = await fetch_and_apply_garland_data(item, server, session)
+        # Marketability
         item.marketable = await fetch_item_market_data(item, server, session)
         cache_item(item)
         return item

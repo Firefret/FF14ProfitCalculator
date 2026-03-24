@@ -4,6 +4,7 @@ import aiohttp
 import asyncio
 from typing import TypeVar
 
+from universalis import fetch_item_market_data
 
 T = TypeVar("T")
 
@@ -100,8 +101,15 @@ async def populate_item_data(item_name: str, server: GameServer, session: aiohtt
         crafting_data.ingredients = (list(ingredients), crafting_data.ingredients[1])
         item.craftable = crafting_data
 
-    # Gatherability, Vendorability, Huntability, icon
+    # Gatherability, Vendorability, Huntability, Icon
     item = await fetch_and_apply_garland_data(item, server, session)
+
+    # Marketability
+    try:
+        market_data = await fetch_item_market_data(item, server, session)
+        item.marketable = market_data
+    except ValueError:
+        pass
     cache_item(item)
     return item
 
