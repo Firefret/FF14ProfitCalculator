@@ -72,5 +72,5 @@ def timed_fetch(item_name: str) -> Item | Craftable | Marketable:
 
 
 
-#print(timed_fetch("Shakshouka")) #fetch_top_item_data('Shakshouka') took 2.783 s
+#print(timed_fetch("Shakshouka")) #fetch_top_item_data('Shakshouka') took 2.783s
 print(timed_fetch("Darksteel Ingot")) #fetch_top_item_data('Darksteel Mitt Gauntlets') took 2.477s
