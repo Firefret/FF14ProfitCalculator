@@ -16,7 +16,7 @@ class Material:
 @dataclass
 class ShoppingList: #let it know about the game server somehow
     items: dict #dict of Material
-    purchase_route: list #or a dict of DC world keys, each element is itself a dict with mat
+    purchase_route: list | None = None#or a dict of DC world keys, each element is itself a dict with mat, None for now
 
     def add(self, mat: Material):
         if mat.item.name in self.items:

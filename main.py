@@ -38,16 +38,27 @@ async def add_request_to_crafting_list(request: ItemRequest):
     crafting_list_entry = CraftingListEntry(item, request.quantity)
     crafting_list.add(crafting_list_entry)
 
-def recursive_mat_sweep(item: Item, amount: int):
-    if item is Craftable:
+def get_material_flags_from_item(item) -> SourceFlags:
+    flags = SourceFlags(craftable = True if isinstance(item, Craftable) else False,
+                        vendotable = True if isinstance(item, Vendorable) else False,
+                        gatherable = True if isinstance(item, Gatherable) else False,
+                        marketable = item.marketable.__is_tradeable__ ) #really gotta get rid of that quirk at some point
+
+    return flags
+
+def recursive_mat_sweep_and_add(item: Item, amount: int, shopping_list: ShoppingList):
+    if isinstance(item, Craftable):
         for index, ingredient in enumerate(item.craftable.ingredients[0]):
-            recursive_mat_sweep(ingredient, amount*item.craftable.ingredients[1][index])
-    mat = Material(item, amount)
-    return mat
+            return recursive_mat_sweep(ingredient, amount*item.craftable.ingredients[1][index])
+    flags = get_material_flags_from_item(item)
+    mat = Material(item, amount, flags)
+    shopping_list.add(mat)
 
 def form_shopping_list(crafting_list: CraftingList) -> ShoppingList:
+    shopping_list = ShoppingList(dict())
     for entry in crafting_list.items:
-
+        recursive_mat_sweep_and_add(entry.item, entry.amount, shopping_list)
+    return shopping_list
 
 
 def timed_fetch(item_name: str) -> Item | Craftable | Marketable:
