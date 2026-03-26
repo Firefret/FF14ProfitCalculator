@@ -10,10 +10,10 @@ from datetime import datetime, timedelta
 
 
 
-#this one will use world name as you can,t sell on other worlds
-async def fetch_item_sale_history_month(item: Item, server: GameServer, session: aiohttp.ClientSession):
+#this one will use world name as you can't sell on other worlds
+async def fetch_item_sale_history_month(item: Item, server: World, session: aiohttp.ClientSession):
     month_in_milliseconds = 2592000000
-    url = f"https://universalis.app/api/v2/history/{server.world}/{item.id}?statsWithin={month_in_milliseconds}&minSalePrice=0&maxSalePrice=2147483647"
+    url = f"https://universalis.app/api/v2/history/{server.name}/{item.id}?statsWithin={month_in_milliseconds}&minSalePrice=0&maxSalePrice=2147483647"
     async with session.get(url) as response:
         if response.status != 200:
             raise ValueError(f"No sale data for {item.name}, code {response.status}")
@@ -67,11 +67,11 @@ def analyze_sale_info(sale_info: dict):
 
     return nq_market_data, hq_market_data
 
-async def fetch_item_market_data(item: Item, server: GameServer, session: aiohttp.ClientSession) -> MarketData:
+async def fetch_item_market_data(item: Item, server: World, session: aiohttp.ClientSession) -> MarketData:
     sale_info = await fetch_item_sale_history_month(item, server, session)
     nq_market_data, hq_market_data, = analyze_sale_info(sale_info)
 
-    return MarketData(server, nq_market_data, hq_market_data)
+    return MarketData(server.name, nq_market_data, hq_market_data)
 
 
 

@@ -2,7 +2,8 @@ from __future__ import annotations
 from typing import Protocol
 from dataclasses import dataclass
 from enum import Enum
-from gameServer import GameServer
+from gameServer import *
+
 
 class Crafter(Enum):
     BSM = "Smithing"
@@ -45,7 +46,7 @@ class SalesData:
 
 @dataclass
 class MarketData:
-    dc: GameServer | None = None
+    dc: DataCenter | None = None
     NQ: SalesData | None = None
     HQ: SalesData | None = None
 
