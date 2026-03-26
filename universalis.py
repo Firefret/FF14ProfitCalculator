@@ -16,7 +16,7 @@ async def fetch_item_sale_history_month(item: Item, server: GameServer, session:
     url = f"https://universalis.app/api/v2/history/{server.world}/{item.id}?statsWithin={month_in_milliseconds}&minSalePrice=0&maxSalePrice=2147483647"
     async with session.get(url) as response:
         if response.status != 200:
-            raise ConnectionError(f"Request failed with status code {response.status}")
+            raise ValueError(f"No sale data for {item.name}, code {response.status}")
         sale_info = await response.json()
 
     if not sale_info["entries"]:

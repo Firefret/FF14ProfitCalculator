@@ -11,7 +11,7 @@ from universalis import *
 
 test_server = GameServer("Light", "Raiden")
 test_request = ItemRequest("Raiden", "Darksteel Mitt Gauntlets", 3)
-crafting_list = CraftingList()
+crafting_list = CraftingList({})
 
 async def fetch_top_item_data(item_name: str, server: GameServer) -> Item | Craftable | Marketable:
     async with aiohttp.ClientSession() as session:
