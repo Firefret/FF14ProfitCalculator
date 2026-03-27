@@ -65,11 +65,19 @@ async def form_game_server_info():
 
         return all_worlds, list(dc_map.values())
 
+worlds, data_centers = asyncio.run(form_game_server_info())
 
 #get dc and world objects by name
+def get_world_by_name(name: str, world_list=None):
+    if world_list is None:
+        world_list = worlds
+    return next((world for world in world_list if world.name == name), None)
 
+def get_dc_by_name(name: str, dc_list=None):
+    if dc_list is None:
+        dc_list = data_centers
+    return next((dc for dc in dc_list if dc.name == name), None)
 
-worlds, data_centers = asyncio.run(form_game_server_info())
 
 #print(worlds)
 print(data_centers)
