@@ -2,7 +2,7 @@ import requests
 import json
 import asyncio
 import aiohttp
-from gameServer import GameServer
+from gameServer import *
 from itemCache import *
 
 shakshouka = Item("Shakshouka", 24280, "https://www.garlandtools.org/files/icons/item/24280.png")
@@ -119,7 +119,7 @@ async def resolve_icon_url(garland_item: dict) -> str:
     return f"https://www.garlandtools.org/files/icons/item/{garland_item["item"]["icon"]}.png"
 
 
-async def fetch_garland_data(item: Item, server: GameServer, session):
+async def fetch_garland_data(item: Item, server: World, session):
     garland_item = await garland_fetch_item(item, session)
 
     tasks = [
@@ -150,6 +150,6 @@ def apply_garland_data(item: Item, garland_data: dict):
         item.vendorable = garland_data["vendors"]
     return item
 
-async def fetch_and_apply_garland_data(item: Item, server: GameServer, session):
+async def fetch_and_apply_garland_data(item: Item, server: World, session):
     apply_garland_data(item, await fetch_garland_data(item, server, session))
     return item

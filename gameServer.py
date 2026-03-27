@@ -9,7 +9,7 @@ class DataCenter:
         self.worlds: list[World] = []  # Map of Name -> World Object
 
     def __repr__(self):
-        return f"<DataCenter {self.name} (Worlds: {self.worlds})>"
+        return f"\n<DataCenter {self.name} (Worlds: {self.worlds})>"
 
 class World:
     def __init__(self, name: str, dc: DataCenter):
@@ -17,24 +17,25 @@ class World:
         self.dc = dc  # This is the "Pointer" back to the parent DC object
 
     def __repr__(self):
-        return f"<World {self.name} (DC: {self.dc.name})>"
+        return f"\n<World {self.name} (DC: {self.dc.name})>"
 
 
 async def fetch_data_centers(session: aiohttp.ClientSession):
-    url = "https://v2.xivapi.com/api/sheet/WorldDCGroupType?fields=Name,IsCloud"
+    url = "https://v2.xivapi.com/api/sheet/WorldDCGroupType?fields=Name,IsCloud&limit=999"
     dc_list = list()
     async with session.get(url) as response:
         response.raise_for_status()
         dc_data = await response.json()
     for row in dc_data["rows"]:
-        if 0 < row["row_id"] < 99 and not row["fields"]["IsCloud"]:
+        # goofy ahh limits but you gotta do what you gotta do, 0 is some test server, 99+ is same, IsCloud = True is virtual DCs they enable for server congestion most probably
+        if 0 < row["row_id"] < 999 and not row["fields"]["IsCloud"]:
             dc_list.append(row["fields"]["Name"])
 
     return dc_list
 
 
 async def fetch_game_worlds(session: aiohttp.ClientSession):
-    url = "https://v2.xivapi.com/api/sheet/World?fields=Name,DataCenter.Name"
+    url = "https://v2.xivapi.com/api/sheet/World?fields=Name,DataCenter.Name&limit=999"
     world_list = list()
     async with session.get(url) as response:
         response.raise_for_status()
@@ -42,7 +43,8 @@ async def fetch_game_worlds(session: aiohttp.ClientSession):
     for row in world_data["rows"]:
         name = row["fields"]["Name"]
         dc = row["fields"]["DataCenter"]["fields"]["Name"]
-        world_list.append({"name": name, "dc": dc})
+        if (name != "Unknown" and name != "") and (dc != "" and dc != "Unknown"):
+            world_list.append({"name": name, "dc": dc})
 
     return world_list
 
@@ -65,19 +67,11 @@ async def form_game_server_info():
 
         return all_worlds, list(dc_map.values())
 
-worlds, data_centers = asyncio.run(form_game_server_info())
-
 #get dc and world objects by name
-def get_world_by_name(name: str, world_list=None):
-    if world_list is None:
-        world_list = worlds
-    return next((world for world in world_list if world.name == name), None)
+def get_world_by_name(name: str, world_list) -> World | None:
+    world = next((world for world in world_list if world.name == name), None)
+    return world
 
-def get_dc_by_name(name: str, dc_list=None):
-    if dc_list is None:
-        dc_list = data_centers
-    return next((dc for dc in dc_list if dc.name == name), None)
-
-
-#print(worlds)
-print(data_centers)
+def get_dc_by_name(name: str, dc_list) -> DataCenter | None:
+    dc = next((dc for dc in dc_list if dc.name == name), None)
+    return dc

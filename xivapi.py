@@ -1,5 +1,4 @@
-from itemRequest import ItemRequest
-from garlandTools import *
+from itemCache import *
 from gameServer import *
 import aiohttp
 import asyncio
@@ -9,9 +8,6 @@ from universalis import fetch_item_market_data
 
 T = TypeVar("T")
 
-
-game_server = GameServer("Light", "Raiden")
-item_request = ItemRequest(game_server, "Darksteel Mitt Gauntlets", 10)
 
 async def fetch_item_base(item_name, session: aiohttp.ClientSession) -> Item:
     request_url = f"https://v2.xivapi.com/api/search?sheets=Item&query=Name%3D%22{item_name}%22"
@@ -75,6 +71,11 @@ async def fetch_recipe(recipe_id: int, session: aiohttp.ClientSession) -> tuple[
         ingredients.append(item_ingredient)
     ingredient_amount = [amount for amount in data["fields"]["AmountIngredient"] if amount > 0]
     item_yield = data["fields"]["AmountResult"]
+
+    if item_yield <= 0:
+        print(f"Warning: Recipe {recipe_id} reports a yield of {item_yield}. Defaulting to 1.")
+        item_yield = 1
+
     crafter_string = data["fields"]["CraftType"]["fields"]["Name"]
     print(crafter_string)
     return ingredients, ingredient_amount, item_yield, crafter_string
@@ -89,7 +90,8 @@ async def fetch_crafting_data(item: Item, session: aiohttp.ClientSession) -> Cra
     crafting_data = CraftingData(recipe_id, recipe_data[2], (recipe_data[0], recipe_data[1]), Crafter(recipe_data[3]))
     return crafting_data
 
-async def populate_item_data(item_name: str, server: GameServer, session: aiohttp.ClientSession) -> Item | Craftable:
+async def populate_item_data(item_name: str, server: World, session: aiohttp.ClientSession) -> Item | Craftable:
+    from garlandTools import fetch_and_apply_garland_data
     item = await fetch_item_base(item_name, session)
     print(f"Retrieving {item.name}. id: {item.id}")
 
@@ -114,7 +116,7 @@ async def populate_item_data(item_name: str, server: GameServer, session: aiohtt
     cache_item(item)
     return item
 
-async def fetch_full_item_data(item_name: str, server: GameServer, session: aiohttp.ClientSession) -> Item | Craftable:
+async def fetch_full_item_data(item_name: str, server: World, session: aiohttp.ClientSession) -> Item | Craftable:
     # 1. Already fully fetched and cached
     item = get_cached_item(item_name)
     if item:
@@ -130,4 +132,4 @@ async def fetch_full_item_data(item_name: str, server: GameServer, session: aioh
     try:
         return await task
     finally:
-        await being_fetched.pop(item_name, None)
+        being_fetched.pop(item_name, None)

@@ -33,15 +33,29 @@ def separate_nq_hq_sale_data(entries: dict) -> tuple[list, list]:
             nq_data.append({"quantity": sale["quantity"], "price": sale["pricePerUnit"], "timestamp": sale["timestamp"]})
     return nq_data, hq_data
 
+
 def calculate_price_dynamics(sale_data) -> float:
+    if not sale_data or len(sale_data) < 2:
+        return 0.0
+
     sale_period_start = datetime.fromtimestamp(sale_data[-1]["timestamp"])
     sale_period_end = datetime.fromtimestamp(sale_data[0]["timestamp"])
 
     sale_period = sale_period_end - sale_period_start
 
-    price_difference = sale_data[0]["price"] - sale_data[-1]["price"]  # 7000 - 5000 = 2000
-    gil_dynamics_per_day = price_difference / sale_period.days  # 2000 / 8 = 250
-    percent = sale_data[-1]["price"] / 100  # 7000 / 100 = 70
+    # total_seconds to avoid 0 days.
+    # max() to ensure we never divide by zero even if timestamps are identical
+
+    seconds = max(sale_period.total_seconds(), 1)
+    days_float = seconds / 86400
+    price_difference = sale_data[0]["price"] - sale_data[-1]["price"]
+    gil_dynamics_per_day = price_difference / days_float
+
+    percent = sale_data[-1]["price"] / 100
+
+    # Guard against 0 price items (unlikely but safe)
+    if percent == 0: return 0.0
+
     percent_dynamics_per_day = round(gil_dynamics_per_day / percent, 2)
     return percent_dynamics_per_day
 
