@@ -101,6 +101,8 @@ async def test_entry_point():
     shopping_list = form_shopping_list(crafting_list)
     print(shopping_list)
 
+#todo: marketable materials amount universalis scan for cheapest and server travel rout
+#todo: material flag toggles, dependent on which the cost and needed mats will be recalculated
 
 
 #print(timed_fetch("Shakshouka")) #fetch_top_item_data('Shakshouka') took 2.783s
