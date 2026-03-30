@@ -1,4 +1,5 @@
 from itemTypes import *
+import re
 
 @dataclass
 class SourceFlags:
@@ -24,6 +25,21 @@ class ShoppingList: #let it know about the game server somehow
             self.items[mat.item.name].amount += mat.amount
         else:
             self.items[mat.item.name] = mat
+            self.sort()
+
+    def sort(self):
+        items = dict()
+        crystals = dict()
+
+        for item in self.items.keys():
+            if re.search("^(Fire|Ice|Lightning|Water|Earth|Wind)\s(Shard|Crystal|Cluster)$", item):
+                crystals[item] = self.items[item]
+            else:
+                items[item] = self.items[item]
+
+        items = dict(sorted(items.items()))
+        crystals = dict(sorted(crystals.items()))
+        self.items = {**items, **crystals}
 
     def __str__(self):
         if not self.items:
