@@ -1,9 +1,9 @@
-from shoppingList import ShoppingList
+from materialList import MaterialList
 from xivapi import *
 from garlandTools import *
 from itemRequest import *
 from craftingList import *
-from shoppingList import *
+from materialList import *
 import aiohttp
 import asyncio
 import time
@@ -50,41 +50,46 @@ def get_material_flags_from_item(item) -> SourceFlags:
     return flags
 
 
-def recursive_mat_sweep_and_add(item: Item, amount: int, shopping_list: ShoppingList):
-    if item.craftable:
-        for index, ingredient in enumerate(item.craftable.ingredients[0]):
-            ing_amount = item.craftable.ingredients[1][index]
-            craft_yield = item.craftable.item_yield
-            amount_of_crafts = math.ceil(amount / craft_yield) #recipe item yield isn't always 1
+def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialListDivided, flag_priority=None, depth = None):
+    if flag_priority is None:
+        flag_priority = [Ordeal.craft, Ordeal.market, Ordeal.gather, Ordeal.hunt, Ordeal.vendor]
 
+    if depth is None:
+        depth = 0
+
+    # 1. Handle Mid Mats (Those that CAN be crafted)
+    if item.craftable:
+        if depth > 0: #Don't need topmost items, those are the ones you gonna craft
+            # Create and add the current item to mid_mats
             flags = get_material_flags_from_item(item)
             mat = Material(item, amount, flags)
-            # default flag priority craft > mb > gather > hunt > vendor
-            test_priority = [Ordeal.craft, Ordeal.market, Ordeal.gather, Ordeal.hunt,
-                             Ordeal.vendor]  # will try to do settable flag priority
-            mat.set_default_flag(test_priority)
+            mat.set_default_flag(flag_priority)
+            mat_list_div.mid_mats.add(mat)
 
-            shopping_list.add(mat)
+        # 2. Now calculate how many crafts we need to satisfy the amount
+        craft_yield = item.craftable.item_yield
+        amount_of_crafts = math.ceil(amount / craft_yield)
 
-            recursive_mat_sweep_and_add(ingredient, amount_of_crafts * ing_amount, shopping_list)
+        # 3. Dig into ingredients
+        for index, ingredient in enumerate(item.craftable.ingredients[0]):
+            ing_per_craft = item.craftable.ingredients[1][index]
+            # Total ingredients needed = (crafts needed) * (items per craft)
+            total_ing_needed = amount_of_crafts * ing_per_craft
+
+            recursive_mat_sweep_and_add(ingredient, total_ing_needed, mat_list_div, flag_priority, depth+1)
+
     else:
-        # If it's not craftable, it's a base material for the shopping list
         flags = get_material_flags_from_item(item)
         mat = Material(item, amount, flags)
+        mat.set_default_flag(flag_priority)
+        mat_list_div.low_mats.add(mat)
 
-        # default flag priority craft > mb > gather > hunt > vendor
-        test_priority = [Ordeal.craft, Ordeal.market, Ordeal.gather, Ordeal.hunt,
-                         Ordeal.vendor]  # will try to do settable flag priority
-        mat.set_default_flag(test_priority)
-
-        shopping_list.add(mat)
-
-def form_shopping_list(crafting_list: CraftingList) -> ShoppingList:
-    shopping_list = ShoppingList(dict())
+def form_divided_material_list(crafting_list: CraftingList) -> MaterialListDivided:
+    mat_list_div = MaterialListDivided(MaterialList({}), MaterialList({}))
     for entry in crafting_list.items.values():
-        recursive_mat_sweep_and_add(entry.item, entry.amount, shopping_list)
+        recursive_mat_sweep_and_add(entry.item, entry.amount, mat_list_div)
 
-    return shopping_list
+    return mat_list_div
 
 
 def timed_fetch(item_name: str) -> Item | Craftable | Marketable:
@@ -118,8 +123,8 @@ async def test_entry_point():
         await asyncio.gather(*tasks)
 
     # 3. Now the shopping list will actually have data
-    shopping_list = form_shopping_list(crafting_list)
-    print(shopping_list)
+    div_mat_list = form_divided_material_list(crafting_list)
+    print(div_mat_list)
 
 
 

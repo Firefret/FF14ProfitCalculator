@@ -1,3 +1,5 @@
+from typing import List
+
 from itemTypes import *
 import re
 
@@ -7,6 +9,7 @@ class Ordeal(Enum):
     gather = "gather"
     market = "market"
     hunt = "hunt"
+
 
 @dataclass
 class SourceFlags:
@@ -30,7 +33,7 @@ class Material:
                 self.ordeal = ordeal
 
 @dataclass
-class ShoppingList: #let it know about the game server somehow
+class MaterialList: #let it know about the game server somehow
     items: dict #dict of Material
     purchase_route: list | None = None#or a dict of DC world keys, each element is itself a dict with mat, None for now
 
@@ -96,3 +99,11 @@ class ShoppingList: #let it know about the game server somehow
             lines.append(f"{mat.amount: >4}x {mat.item.name: <25} {source_str} {mat.item}\n")
 
         return "\n".join(lines)
+
+@dataclass
+class MaterialListDivided:
+    mid_mats: MaterialList
+    low_mats: MaterialList
+
+    def __repr__(self):
+        return f"\n--MID MATS--\n{self.mid_mats.__str__()}\n--LOW MATS--\n{self.low_mats.__str__()}"
