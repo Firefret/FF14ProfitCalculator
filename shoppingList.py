@@ -1,6 +1,13 @@
 from itemTypes import *
 import re
 
+class Ordeal(Enum):
+    craft = "craft"
+    vendor = "vendor"
+    gather = "gather"
+    market = "market"
+    hunt = "hunt"
+
 @dataclass
 class SourceFlags:
     is_craftable: bool
@@ -14,6 +21,13 @@ class Material:
     item: Item
     amount: int
     flags: SourceFlags
+    ordeal: Ordeal | None = None
+
+    def set_default_flag(self, priority: list[Ordeal]):
+        for ordeal in reversed(priority):
+            attr_name = f"is_{ordeal.value}able"
+            if getattr(self.flags, attr_name, False):
+                self.ordeal = ordeal
 
 @dataclass
 class ShoppingList: #let it know about the game server somehow
@@ -48,10 +62,29 @@ class ShoppingList: #let it know about the game server somehow
         lines = []
         for mat in self.items.values():
             sources = []
-            if mat.flags.is_vendorable: sources.append("[Vendor]")
-            if mat.flags.is_gatherable: sources.append("[Gather]")
-            if mat.flags.is_marketable: sources.append("[MB]")
-            if mat.flags.is_huntable: sources.append("[Hunt]")
+            if mat.flags.is_vendorable:
+                if mat.ordeal == Ordeal.vendor:
+                    sources.append("[>Vendor<]")
+                else:
+                    sources.append("[Vendor]")
+
+            if mat.flags.is_gatherable:
+                if mat.ordeal == Ordeal.gather:
+                    sources.append("[>Gather<]")
+                else:
+                    sources.append("[Gather]")
+
+            if mat.flags.is_marketable:
+                if mat.ordeal == Ordeal.market:
+                    sources.append("[>Market<]")
+                else:
+                    sources.append("[Market]")
+
+            if mat.flags.is_huntable:
+                if mat.ordeal == Ordeal.hunt:
+                    sources.append("[>Hunt<]")
+                else:
+                    sources.append("[Hunt]")
 
             source_str = " ".join(sources)
             lines.append(f"{mat.amount: >4}x {mat.item.name: <25} {source_str} {mat.item}\n")

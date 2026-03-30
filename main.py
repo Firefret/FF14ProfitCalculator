@@ -61,6 +61,12 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, shopping_list: Shopping
         # If it's not craftable, it's a base material for the shopping list
         flags = get_material_flags_from_item(item)
         mat = Material(item, amount, flags)
+
+        # default flag priority craft > mb > gather > hunt > vendor
+        test_priority = [Ordeal.craft, Ordeal.market, Ordeal.gather, Ordeal.hunt,
+                         Ordeal.vendor]  # will try to do settable flag priority
+        mat.set_default_flag(test_priority)
+
         shopping_list.add(mat)
 
 def form_shopping_list(crafting_list: CraftingList) -> ShoppingList:
@@ -105,10 +111,7 @@ async def test_entry_point():
     shopping_list = form_shopping_list(crafting_list)
     print(shopping_list)
 
-#default flag priority craft > mb > gather > hunt > vendor
 
-def set_default_material_flag(mat: Material):
-    mat.flags
 
 #todo: marketable materials amount universalis scan for cheapest and server travel route
 #todo: material flag toggles, dependent on which the cost and needed mats will be recalculated
