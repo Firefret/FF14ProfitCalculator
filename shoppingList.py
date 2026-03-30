@@ -86,6 +86,12 @@ class ShoppingList: #let it know about the game server somehow
                 else:
                     sources.append("[Hunt]")
 
+            if mat.flags.is_craftable:
+                if mat.ordeal == Ordeal.craft:
+                    sources.append("[>Craft<]")
+                else:
+                    sources.append("[Craft]")
+
             source_str = " ".join(sources)
             lines.append(f"{mat.amount: >4}x {mat.item.name: <25} {source_str} {mat.item}\n")
 

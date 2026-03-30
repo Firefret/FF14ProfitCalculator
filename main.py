@@ -56,6 +56,16 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, shopping_list: Shopping
             ing_amount = item.craftable.ingredients[1][index]
             craft_yield = item.craftable.item_yield
             amount_of_crafts = math.ceil(amount / craft_yield) #recipe item yield isn't always 1
+
+            flags = get_material_flags_from_item(item)
+            mat = Material(item, amount, flags)
+            # default flag priority craft > mb > gather > hunt > vendor
+            test_priority = [Ordeal.craft, Ordeal.market, Ordeal.gather, Ordeal.hunt,
+                             Ordeal.vendor]  # will try to do settable flag priority
+            mat.set_default_flag(test_priority)
+
+            shopping_list.add(mat)
+
             recursive_mat_sweep_and_add(ingredient, amount_of_crafts * ing_amount, shopping_list)
     else:
         # If it's not craftable, it's a base material for the shopping list
