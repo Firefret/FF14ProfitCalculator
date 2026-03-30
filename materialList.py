@@ -32,6 +32,13 @@ class Material:
             if getattr(self.flags, attr_name, False):
                 self.ordeal = ordeal
 
+    def set_ordeal(self, ordeal: Ordeal) -> bool:
+        if not hasattr(self.flags, f"is_{ordeal.value}able"):
+            return False
+
+        self.ordeal = ordeal
+        return True
+
 @dataclass
 class MaterialList: #let it know about the game server somehow
     items: dict #dict of Material
