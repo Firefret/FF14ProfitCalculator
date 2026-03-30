@@ -2,7 +2,7 @@ from materialList import MaterialList
 from xivapi import *
 from garlandTools import *
 from itemRequest import *
-from craftingList import *
+from wishlist import *
 from materialList import *
 import aiohttp
 import asyncio
@@ -10,8 +10,6 @@ import time
 import gameServer as server
 import math
 from universalis import *
-
-crafting_list = CraftingList({})
 
 async def fetch_top_item_data(item_name: str, server: World) -> Item | Craftable | Marketable:
     async with aiohttp.ClientSession() as session:
@@ -34,11 +32,11 @@ async def fetch_top_item_data(item_name: str, server: World) -> Item | Craftable
         return item
 
 
-async def add_request_to_crafting_list(request: ItemRequest):
+async def add_request_to_wishlist(request: ItemRequest, wishlist: Wishlist):
     item = await fetch_top_item_data(request.item_name, request.server)
     amount_of_crafts = math.ceil(request.quantity / item.craftable.item_yield)
-    crafting_list_entry = CraftingListEntry(item, amount_of_crafts)
-    crafting_list.add(crafting_list_entry)
+    wishlist_entry = WishlistEntry(item, amount_of_crafts)
+    wishlist.add(wishlist_entry)
 
 def get_material_flags_from_item(item) -> SourceFlags:
     flags = SourceFlags(is_craftable = True if item.craftable else False,
@@ -84,9 +82,9 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
         mat.set_default_flag(flag_priority)
         mat_list_div.low_mats.add(mat)
 
-def form_divided_material_list(crafting_list: CraftingList) -> MaterialListDivided:
+def form_divided_material_list(wishlist: Wishlist) -> MaterialListDivided:
     mat_list_div = MaterialListDivided(MaterialList({}), MaterialList({}))
-    for entry in crafting_list.items.values():
+    for entry in wishlist.items.values():
         recursive_mat_sweep_and_add(entry.item, entry.amount, mat_list_div)
 
     return mat_list_div
@@ -103,6 +101,7 @@ def timed_fetch(item_name: str) -> Item | Craftable | Marketable:
 # main.py
 
 async def test_entry_point():
+    wishlist = Wishlist({})
     async with aiohttp.ClientSession() as session:
         all_worlds, all_dcs = await form_game_server_info()
 
@@ -119,11 +118,11 @@ async def test_entry_point():
                          ]
 
         # 2. You MUST await these or use gather
-        tasks = [add_request_to_crafting_list(req) for req in test_requests]
+        tasks = [add_request_to_wishlist(req, wishlist) for req in test_requests]
         await asyncio.gather(*tasks)
 
     # 3. Now the shopping list will actually have data
-    div_mat_list = form_divided_material_list(crafting_list)
+    div_mat_list = form_divided_material_list(wishlist)
     print(div_mat_list)
 
 

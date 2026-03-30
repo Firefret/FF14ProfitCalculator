@@ -56,7 +56,7 @@ class MaterialList: #let it know about the game server somehow
         crystals = dict()
 
         for item in self.items.keys():
-            if re.search("^(Fire|Ice|Lightning|Water|Earth|Wind)\s(Shard|Crystal|Cluster)$", item):
+            if re.search(r"^(Fire|Ice|Lightning|Water|Earth|Wind)\s(Shard|Crystal|Cluster)$", item):
                 crystals[item] = self.items[item]
             else:
                 items[item] = self.items[item]

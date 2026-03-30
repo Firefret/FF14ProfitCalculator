@@ -1,15 +1,15 @@
 from itemTypes import *
 
 @dataclass
-class CraftingListEntry:
+class WishlistEntry:
     item: Craftable | Item
     amount: int
 
 @dataclass
-class CraftingList:
+class Wishlist:
     items: dict
 
-    def add(self, entry: CraftingListEntry):
+    def add(self, entry: WishlistEntry):
         if entry.item.name not in self.items:
             self.items[entry.item.name] = entry
         else:
