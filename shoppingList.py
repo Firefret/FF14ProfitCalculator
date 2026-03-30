@@ -54,6 +54,6 @@ class ShoppingList: #let it know about the game server somehow
             if mat.flags.is_huntable: sources.append("[Hunt]")
 
             source_str = " ".join(sources)
-            lines.append(f"{mat.amount: >4}x {mat.item.name: <25} {source_str}")
+            lines.append(f"{mat.amount: >4}x {mat.item.name: <25} {source_str} {mat.item}\n")
 
         return "\n".join(lines)

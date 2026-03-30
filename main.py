@@ -68,7 +68,6 @@ def form_shopping_list(crafting_list: CraftingList) -> ShoppingList:
     for entry in crafting_list.items.values():
         recursive_mat_sweep_and_add(entry.item, entry.amount, shopping_list)
 
-    #todo: sort alphabetically, crystals at the end
     return shopping_list
 
 
