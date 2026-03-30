@@ -24,7 +24,7 @@ class Market:
 @dataclass
 class VendorEntry:
     material: Material
-    listings: dict[str, tuple[Item, int, int]]
+    listings: dict[str, tuple[Item, int, int]] #literally a place to use VendorListing, rewrite this
     chosen_listing: tuple[str, tuple[Item, int, int]]
 
 @dataclass
