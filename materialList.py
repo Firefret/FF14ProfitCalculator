@@ -25,6 +25,7 @@ class Material:
     amount: int
     flags: SourceFlags
     ordeal: Ordeal | None = None
+    purchase_route: list | None = None#or a dict of DC world keys, each element is itself a dict with mat, None for now
 
     def set_default_flag(self, priority: list[Ordeal]):
         for ordeal in reversed(priority):
@@ -42,7 +43,7 @@ class Material:
 @dataclass
 class MaterialList: #let it know about the game server somehow
     items: dict #dict of Material
-    purchase_route: list | None = None#or a dict of DC world keys, each element is itself a dict with mat, None for now
+
 
     def add(self, mat: Material):
         if mat.item.name in self.items:
@@ -74,31 +75,31 @@ class MaterialList: #let it know about the game server somehow
             sources = []
             if mat.flags.is_vendorable:
                 if mat.ordeal == Ordeal.vendor:
-                    sources.append("[>Vendor<]")
+                    sources.append(">Vendor<")
                 else:
                     sources.append("[Vendor]")
 
             if mat.flags.is_gatherable:
                 if mat.ordeal == Ordeal.gather:
-                    sources.append("[>Gather<]")
+                    sources.append(">Gather<")
                 else:
                     sources.append("[Gather]")
 
             if mat.flags.is_marketable:
                 if mat.ordeal == Ordeal.market:
-                    sources.append("[>Market<]")
+                    sources.append(">Market<")
                 else:
                     sources.append("[Market]")
 
             if mat.flags.is_huntable:
                 if mat.ordeal == Ordeal.hunt:
-                    sources.append("[>Hunt<]")
+                    sources.append(">Hunt<")
                 else:
                     sources.append("[Hunt]")
 
             if mat.flags.is_craftable:
                 if mat.ordeal == Ordeal.craft:
-                    sources.append("[>Craft<]")
+                    sources.append(">Craft<")
                 else:
                     sources.append("[Craft]")
 

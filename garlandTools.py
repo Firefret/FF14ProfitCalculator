@@ -34,11 +34,27 @@ def fetch_item_name_by_id(item_id: int):
 ["node"]["type"] = 5: spearfishing
 ["fishingSpots"].len > 0 = fishing
 """
+def gathering_sanity_check(garland_item: dict) -> bool:
+    nodes = []
+    if "ingredients" in garland_item:
+        for ingredient in garland_item["ingredients"]:
+            if "nodes" in ingredient:
+                nodes.append(*ingredient["nodes"])
+
+        for partial in garland_item["partials"]:
+            if partial["type"] == "node" and int(partial["id"]) in nodes:
+                return False
+
+    return True
+
+
 async def resolve_gathering_data(garland_item: dict) -> GatheringData | bool:
     if "partials" in garland_item:
         node = next((d for d in garland_item["partials"] if d["type"] == "node"), None)
         if node is not None:
-            if node["obj"]["t"] == 0 or node["obj"]["t"] == 1:
+            if not gathering_sanity_check(garland_item):
+                return False
+            elif node["obj"]["t"] == 0 or node["obj"]["t"] == 1:
                 return GatheringData(Gatherer.MIN)
             elif node["obj"]["t"] == 2 or node["obj"]["t"] == 3:
                 return GatheringData(Gatherer.BTN)
@@ -66,6 +82,9 @@ async def garland_fetch_mob_name(mob_id: str, session) -> str:
         garland_item = await response.json()
     return garland_item["mob"]["name"]
 # print(garland_fetch_mob_name("65950000005692"))
+
+
+
 
 async def resolve_hunting_data(garland_item: dict, session) -> HuntingData | bool:
     if "drops" in garland_item["item"]:

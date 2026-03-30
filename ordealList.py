@@ -1,5 +1,8 @@
 from dataclasses import dataclass
+from materialList import *
 
 @dataclass
 class OrdealList:
-    craft: list[Mater]
+    divided_mats: MaterialListDivided
+
+    craft_list
