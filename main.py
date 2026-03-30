@@ -8,6 +8,7 @@ import aiohttp
 import asyncio
 import time
 import gameServer as server
+import math
 from universalis import *
 
 crafting_list = CraftingList({})
@@ -35,13 +36,14 @@ async def fetch_top_item_data(item_name: str, server: World) -> Item | Craftable
 
 async def add_request_to_crafting_list(request: ItemRequest):
     item = await fetch_top_item_data(request.item_name, request.server)
-    crafting_list_entry = CraftingListEntry(item, request.quantity)
+    amount_of_crafts = math.ceil(request.quantity / item.craftable.item_yield)
+    crafting_list_entry = CraftingListEntry(item, amount_of_crafts)
     crafting_list.add(crafting_list_entry)
 
 def get_material_flags_from_item(item) -> SourceFlags:
     flags = SourceFlags(is_craftable = True if item.craftable else False,
                         is_vendorable = True if item.vendorable else False,
-                        is_gatherable = True if item.marketable else False,
+                        is_gatherable = True if item.gatherable else False,
                         is_huntable = True if item.huntable else False,
                         is_marketable = True if item.marketable else False)
 
@@ -53,7 +55,9 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, shopping_list: Shopping
         for index, ingredient in enumerate(item.craftable.ingredients[0]):
             # ingredient must be an Item object!
             ing_amount = item.craftable.ingredients[1][index]
-            recursive_mat_sweep_and_add(ingredient, amount * ing_amount, shopping_list)
+            craft_yield = item.craftable.item_yield
+            amount_of_crafts = math.ceil(amount / craft_yield)
+            recursive_mat_sweep_and_add(ingredient, amount_of_crafts * ing_amount, shopping_list)
     else:
         # If it's not craftable, it's a base material for the shopping list
         flags = get_material_flags_from_item(item)
@@ -101,7 +105,7 @@ async def test_entry_point():
     shopping_list = form_shopping_list(crafting_list)
     print(shopping_list)
 
-#todo: marketable materials amount universalis scan for cheapest and server travel rout
+#todo: marketable materials amount universalis scan for cheapest and server travel route
 #todo: material flag toggles, dependent on which the cost and needed mats will be recalculated
 
 

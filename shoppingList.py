@@ -25,3 +25,19 @@ class ShoppingList: #let it know about the game server somehow
         else:
             self.items[mat.item.name] = mat
 
+    def __str__(self):
+        if not self.items:
+            return "Shopping List is empty."
+
+        lines = []
+        for mat in self.items.values():
+            sources = []
+            if mat.flags.is_vendorable: sources.append("[Vendor]")
+            if mat.flags.is_gatherable: sources.append("[Gather]")
+            if mat.flags.is_marketable: sources.append("[MB]")
+            if mat.flags.is_huntable: sources.append("[Hunt]")
+
+            source_str = " ".join(sources)
+            lines.append(f"{mat.amount: >4}x {mat.item.name: <25} {source_str}")
+
+        return "\n".join(lines)
