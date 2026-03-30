@@ -42,7 +42,7 @@ class Material:
 
 @dataclass
 class MaterialList: #let it know about the game server somehow
-    items: dict #dict of Material
+    items: dict[str, Material]
 
 
     def add(self, mat: Material):

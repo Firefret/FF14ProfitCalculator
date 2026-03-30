@@ -4,6 +4,7 @@ from garlandTools import *
 from itemRequest import *
 from wishlist import *
 from materialList import *
+from ordealList import *
 import aiohttp
 import asyncio
 import time
@@ -123,7 +124,10 @@ async def test_entry_point():
 
     # 3. Now the shopping list will actually have data
     div_mat_list = form_divided_material_list(wishlist)
+    ordeal_list = OrdealList(div_mat_list)
     print(div_mat_list)
+    print(ordeal_list)
+
 
 
 

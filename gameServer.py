@@ -27,7 +27,7 @@ async def fetch_data_centers(session: aiohttp.ClientSession):
         response.raise_for_status()
         dc_data = await response.json()
     for row in dc_data["rows"]:
-        # goofy ahh limits but you gotta do what you gotta do, 0 is some test server, 99+ is same, IsCloud = True is virtual DCs they enable for server congestion most probably
+        # goofy ahh limits but you gotta do what you gotta do, 0 is some test server, IsCloud = True is virtual DCs they enable for server congestion most probably
         if 0 < row["row_id"] < 999 and not row["fields"]["IsCloud"]:
             dc_list.append(row["fields"]["Name"])
 
