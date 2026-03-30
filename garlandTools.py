@@ -34,6 +34,8 @@ def fetch_item_name_by_id(item_id: int):
 ["node"]["type"] = 5: spearfishing
 ["fishingSpots"].len > 0 = fishing
 """
+
+#Apparenlty garlandtools output can have nodes in partials on nongatherables if its ingredients are gatherable so we got to manually check for such situation
 def gathering_sanity_check(garland_item: dict) -> bool:
     nodes = []
     if "ingredients" in garland_item:
