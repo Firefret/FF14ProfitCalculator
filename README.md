@@ -1,3 +1,5 @@
+WIP 
+
 Profit calculator for Final Fantasy XIV
 
 Item names in -> list of materials with live MB prices and togglable methods of procurement with list recalculating out
