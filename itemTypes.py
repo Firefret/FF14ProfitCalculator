@@ -25,7 +25,7 @@ class Gatherer(Enum):
 class CraftingData:
     recipe_id: int
     item_yield: int
-    ingredients: tuple[list[Item | Craftable], list[int]]
+    ingredients: tuple[list[Item], list[int]]
     craft_class: Crafter
 
 class Craftable(Protocol):
@@ -43,6 +43,27 @@ class SalesData:
     avg_buying_price: int | None = None #for visual purposes only, all the None fields are populated las, when universalis data is processed
     price_dynamics: float | None = None
     selling_velocity: float | None = None
+
+class MarketListing:
+    world: World
+    retainer_name: str
+    quantity: int
+    price: int
+    price_per_unit: int
+
+    def __init__(self, world: World, retainer_name: str, quantity: int, price: int):
+        self.world = world
+        self.retainer_name = retainer_name
+        self.quantity = quantity
+        self.price = price
+        self.price_per_unit = round(self.price / self.quantity)
+
+@dataclass
+class ListingData:
+    hq: list[MarketListing|None]
+    nq: list[MarketListing|None]
+
+
 
 @dataclass
 class MarketData:

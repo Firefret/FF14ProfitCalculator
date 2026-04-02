@@ -2,6 +2,9 @@ import requests
 import json
 import aiohttp
 import asyncio
+
+from urllib3.util import url
+
 from itemTypes import *
 from gameServer import *
 from datetime import datetime, timedelta
@@ -86,6 +89,73 @@ async def fetch_item_market_data(item: Item, server: World, session: aiohttp.Cli
     nq_market_data, hq_market_data, = analyze_sale_info(sale_info)
 
     return MarketData(server.name, nq_market_data, hq_market_data)
+
+def separate_ids_by_100s(item_id_list:list):
+    separated_lists = []
+    temp_list = []
+
+    while item_id_list:
+        if len(temp_list) == 100:
+            separated_lists.append(temp_list)
+            temp_list = []
+
+        temp_list.append(item_id_list.pop(0))
+    if temp_list:
+        separated_lists.append(temp_list)
+
+    return separated_lists
+
+async def get_item_listings(all_item_list: list[Item], dc: DataCenter, session: aiohttp.ClientSession):
+    item_ids = list(map(lambda item: item.id, all_item_list))
+    item_lists = separate_ids_by_100s(item_ids) # Universalis can accept 100 IDs at once, so we'll do it by 100's
+    listings = []
+    for item_list in item_lists:
+        item_list_copy = item_list.copy()
+        id_string = ",".join(map(str, item_list))
+        url = f"https://universalis.app/api/v2/{dc.name}/{id_string}?entries=0"
+        async with session.get(url) as response:
+            if response.status == 400:
+                raise ValueError(f"400: The parameters are invalid")
+            if response.status == 404:
+                raise ValueError(f"404: The world/DC or item requested is invalid.")# When requesting multiple items at once, an invalid item ID will not trigger this.
+                                                                                    # Instead, the returned list of unresolved item IDs will contain the invalid item ID or IDs.
+            if response.status != 200:
+                response.raise_for_status()
+
+            listing_data = await response.json()
+
+            if listing_data["unresolvedItems"]:
+                raise ValueError(f"Some items were unresolved: {listing_data['unresolvedItems']}")
+
+            for item_id, listing_data in listing_data["items"].items():
+                item_index = item_list_copy.index(int(item_id)) # get the index of the item we are inspecting the listings of, because the response item order is random
+                listings = listing_data["listings"]
+                hq = []
+                nq = []
+
+                for listing in listings:
+                    world = get_world_by_name(listing["worldName"], dc.worlds)
+                    retainer_name = listing["retainerName"]
+                    quantity = listing["quantity"]
+                    price = listing["total"]
+                    market_listing = MarketListing(world, retainer_name, quantity, price)
+                    if listing["hq"]:
+                        hq.append(market_listing)
+                    else:
+                        nq.append(market_listing)
+
+                item_list_copy[item_index] = ListingData(hq, nq)
+
+        listings = [*listings, *item_list_copy]
+
+    return listings
+
+
+
+
+
+
+
 
 
 

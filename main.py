@@ -122,11 +122,12 @@ async def test_entry_point():
         tasks = [add_request_to_wishlist(req, wishlist) for req in test_requests]
         await asyncio.gather(*tasks)
 
-    # 3. Now the shopping list will actually have data
-    div_mat_list = form_divided_material_list(wishlist)
-    ordeal_list = OrdealList(div_mat_list)
-    print(div_mat_list)
-    print(ordeal_list)
+        # 3. Now the shopping list will actually have data
+        div_mat_list = form_divided_material_list(wishlist)
+        ordeal_list = OrdealList(div_mat_list)
+        print(div_mat_list)
+        print(ordeal_list)
+        print(await get_item_listings(div_mat_list.mid_mats.items["Grade 4 Gemsap of Vitality"].item.craftable.ingredients[0], world.dc, session))
 
 
 

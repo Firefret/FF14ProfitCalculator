@@ -68,7 +68,7 @@ async def form_game_server_info():
         return all_worlds, list(dc_map.values())
 
 #get dc and world objects by name
-def get_world_by_name(name: str, world_list) -> World | None:
+def get_world_by_name(name: str, world_list: list[World]) -> World | None:
     world = next((world for world in world_list if world.name == name), None)
     return world
 
