@@ -1,14 +1,9 @@
-from materialList import MaterialList
 from xivapi import *
 from garlandTools import *
 from itemRequest import *
 from wishlist import *
-from materialList import *
 from ordealList import *
-import aiohttp
-import asyncio
 import time
-import gameServer as server
 import math
 from universalis import *
 
@@ -40,15 +35,6 @@ async def add_request_to_wishlist(request: ItemRequest, wishlist: Wishlist):
     wishlist_entry = WishlistEntry(item, amount_of_crafts)
     wishlist.add(wishlist_entry)
 
-def get_material_flags_from_item(item) -> SourceFlags:
-    flags = SourceFlags(is_craftable = True if item.craftable else False,
-                        is_vendorable = True if item.vendorable else False,
-                        is_gatherable = True if item.gatherable else False,
-                        is_huntable = True if item.huntable else False,
-                        is_marketable = True if item.marketable else False)
-
-    return flags
-
 
 def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialListDivided, flag_priority=None, depth = None):
     if flag_priority is None:
@@ -61,7 +47,7 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
     if item.craftable:
         if depth > 0: #Don't need topmost items, those are the ones you gonna craft
             # Create and add the current item to mid_mats
-            flags = get_material_flags_from_item(item)
+            flags = item.get_material_flags()
             mat = Material(item, amount, flags)
             mat.set_default_flag(flag_priority)
             mat_list_div.mid_mats.add(mat)
@@ -79,7 +65,7 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
             recursive_mat_sweep_and_add(ingredient, total_ing_needed, mat_list_div, flag_priority, depth+1)
 
     else:
-        flags = get_material_flags_from_item(item)
+        flags = item.get_material_flags()
         mat = Material(item, amount, flags)
         mat.set_default_flag(flag_priority)
         mat_list_div.low_mats.add(mat)
@@ -147,8 +133,8 @@ async def test_entry_point():
         await mat_list_fetch_and_apply_market_listings(div_mat_list.mid_mats, world.dc, session)
 
         print(div_mat_list)
-        return div_mat_list
         ordeal_list = OrdealList(div_mat_list)
+        print(ordeal_list)
 
         #print(await get_item_listings(div_mat_list.mid_mats.items["Grade 4 Gemsap of Vitality"].item.craftable.ingredients[0], world.dc, session))
 

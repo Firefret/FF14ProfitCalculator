@@ -37,6 +37,9 @@ class Material:
         self.ordeal = ordeal
         return True
 
+    #def remove_ordeal_craft(self):
+
+
 @dataclass
 class MaterialList: #let it know about the game server somehow
     items: dict[str, Material]
@@ -48,6 +51,16 @@ class MaterialList: #let it know about the game server somehow
         else:
             self.items[mat.item.name] = mat
             self.sort()
+
+    def remove(self, mat_name, amount):
+        if mat_name not in self.items:
+            return False
+
+        if amount > self.items[mat_name].amount:
+            raise ValueError(f"Not enough {mat_name} to remove.")
+
+        self.items[mat_name].amount -= amount
+        return True
 
     def sort(self):
         items = dict()

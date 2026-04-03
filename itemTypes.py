@@ -3,6 +3,7 @@ from typing import Protocol
 from dataclasses import dataclass
 from enum import Enum
 from gameServer import *
+from materialList import SourceFlags
 
 
 class Crafter(Enum):
@@ -116,6 +117,15 @@ class Item:
     def __hash__(self) -> int:
         return hash(self.id)
 
+    def get_material_flags(self) -> SourceFlags:
+        flags = SourceFlags(is_craftable=True if self.craftable else False,
+                            is_vendorable=True if self.vendorable else False,
+                            is_gatherable=True if self.gatherable else False,
+                            is_huntable=True if self.huntable else False,
+                            is_marketable=True if self.marketable else False)
+
+        return flags
+
 
 
 def is_craftable(item: Item) -> bool:
@@ -135,3 +145,6 @@ def is_marketable(item: Item) -> bool:
         return True
     else:
         return False
+
+
+

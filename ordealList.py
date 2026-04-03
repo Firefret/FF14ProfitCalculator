@@ -15,22 +15,74 @@ class MarketEntry:
     price_per_item: int
     overall_price: int
 
+
 @dataclass
 class Market:
-    list: list[MarketEntry]
-    overall_price: int
+    def __init__(self, list: list[MarketEntry]):
+        self.list = list
+
+    @property
+    def overall_price(self) -> int:
+        result = 0
+        for entry in self.list:
+            result += entry.overall_price
+        return result
+
+    @overall_price.setter
+    def overall_price(self, value):
+        pass
+
 
 
 @dataclass
 class VendorEntry:
     material: Material
-    listings: dict[str, tuple[Item, int, int]] #literally a place to use VendorListing, rewrite this
-    chosen_listing: tuple[str, tuple[Item, int, int]]
+    listings: dict[str, VendorListing]
+    chosen_listing: tuple[str, VendorListing]
+
+    def __init__(self, mat: Material):
+        self.material = mat
+        first_key = next(iter(self.listings))
+        chosen_listing = (first_key, self.listings[first_key])
+        for name, listing in self.listings.items():
+            if any(x in name for x in ["Scrip", "Tomestone", "Bicolor"]):
+                chosen_listing = (name, listing)
+        self.chosen_listing = chosen_listing
+
+    @property
+    def listings(self) -> dict[str, VendorListing]:
+        dictionary = {}
+        listing_set = self.material.item.vendorable.listings
+        for listing in listing_set:
+            dictionary[listing.currency.name] = listing
+        return dictionary
+    @listings.setter
+    def listings(self, value):
+        pass
+
+
 
 @dataclass
 class Vendor:
     list: list[VendorEntry]
     currencies_needed: dict[str, tuple[Item, int]]
+
+    def __init__(self, list: list[VendorEntry]):
+        self.list = list
+
+    @property
+    def currencies_needed(self) -> dict[str, tuple[Item, int]]:
+        dictionary = {}
+        for entry in self.list:
+            purchases_needed = math.ceil(entry.material.amount / entry.chosen_listing[1].amount)
+            cost_per_purchase = entry.chosen_listing[1].cost
+            total_currency_cost = purchases_needed * cost_per_purchase
+            if entry.chosen_listing[0] in dictionary:
+                dictionary[entry.chosen_listing[0]][1] += total_currency_cost
+            else:
+                dictionary[entry.chosen_listing[0]] = (entry.chosen_listing[1].currency, total_currency_cost)
+        return dictionary
+
 
 @dataclass
 class Gather:
@@ -80,24 +132,7 @@ class OrdealList:
 
             # Vendor
             elif mat.ordeal == Ordeal.vendor:
-                listings = {}
-                default_listing = None
-                # Inside the Vendor loop
-                for listing in mat.item.vendorable.listings:
-                    currency_name = listing.currency.name
-                    # Store the inner tuple
-                    listings[currency_name] = (listing.currency, listing.cost, listing.amount)
-
-                    if any(x in currency_name for x in ["Scrip", "Tomestone", "Bicolor"]):
-                        # Store as (Key, Value_Tuple)
-                        default_listing = (currency_name, listings[currency_name])
-
-                # If no special currency found, take the first one available
-                if default_listing is None:
-                    first_key = list(listings)[0]
-                    default_listing = (first_key, listings[first_key])
-
-                entry = VendorEntry(mat, listings, default_listing)
+                entry = VendorEntry(mat)
                 vendor_entries.append(entry)
 
             # Gather
@@ -125,24 +160,7 @@ class OrdealList:
 
             # Vendor
             elif mat.ordeal == Ordeal.vendor:
-                listings = {}
-                default_listing = None
-                # Inside the Vendor loop
-                for listing in mat.item.vendorable.listings:
-                    currency_name = listing.currency.name
-                    # Store the inner tuple
-                    listings[currency_name] = (listing.currency, listing.cost, listing.amount)
-
-                    if any(x in currency_name for x in ["Scrip", "Tomestone", "Bicolor"]):
-                        # Store as (Key, Value_Tuple)
-                        default_listing = (currency_name, listings[currency_name])
-
-                # If no special currency found, take the first one available
-                if default_listing is None:
-                    first_key = list(listings)[0]
-                    default_listing = (first_key, listings[first_key])
-
-                entry = VendorEntry(mat, listings, default_listing)
+                entry = VendorEntry(mat)
                 vendor_entries.append(entry)
 
             # Gather
@@ -158,36 +176,10 @@ class OrdealList:
                 craft_entries.append(mat)
 
         if market_entries:
-            overall_price = 0
-            for entry in market_entries:
-                overall_price += entry.overall_price
-
-            self.market = Market(market_entries, overall_price)
+            self.market = Market(market_entries)
 
         if vendor_entries:
-            currencies_needed = {}
-            for entry in vendor_entries:
-                currency_name = entry.chosen_listing[0]
-                # inner_tuple = (Currency_Item_Object, Cost_Per_Purchase, Amount_Received_Per_Purchase)
-                inner_tuple = entry.chosen_listing[1]
-
-                currency_item = inner_tuple[0]
-                cost_per_unit = inner_tuple[1]
-                yield_per_unit = inner_tuple[2]
-
-                # How many times do we need to "click buy"?
-                purchases_needed = math.ceil(entry.material.amount / yield_per_unit)
-                total_currency_cost = purchases_needed * cost_per_unit
-
-                if currency_name in currencies_needed:
-                    # Update the accumulated cost (index 1 of our stored tuple)
-                    current_item, current_cost = currencies_needed[currency_name]
-                    currencies_needed[currency_name] = (current_item, current_cost + total_currency_cost)
-                else:
-                    # Create new entry
-                    currencies_needed[currency_name] = (currency_item, total_currency_cost)
-
-            self.vendor = Vendor(vendor_entries, currencies_needed)
+            self.vendor = Vendor(vendor_entries)
 
         if gather_entries:
             self.gather = Gather(gather_entries)
@@ -212,6 +204,8 @@ class OrdealList:
         if self.market:
             sections.append(f"\n[ MARKET BOARD ] - Total: {self.market.overall_price:,} Gil")
             for m in self.market.list:
+                if m.material.amount == 0:
+                    continue
                 sections.append(f"  x{m.material.amount:<4} {m.material.item.name:<30} @ {m.price_per_item:>8,} Gil")
 
         # VENDOR SECTION
@@ -243,4 +237,34 @@ class OrdealList:
 
         sections.append("\n" + divider)
         return "\n".join(sections)
+
+    def recursively_remove_materials(self, mat: Material, amount=None):
+        if amount is None:
+            amount = mat.amount
+
+        mid_mats = self.mats.mid_mats
+        low_mats = self.mats.low_mats
+        for ingredient, ing_amount in zip(mat.item.craftable.ingredients[0], mat.item.craftable.ingredients[1]):
+            total_amount = amount * ing_amount
+            if ingredient.craftable:
+                self.recursively_remove_materials(mid_mats.items[ingredient.name], total_amount)
+                mid_mats.remove(ingredient.name, total_amount)
+            else:
+                low_mats.remove(ingredient.name, total_amount)
+
+    def remove_flag_craft(self, mat_name: str):
+        mat_list = self.mats.mid_mats.items
+        low_mats = self.mats.low_mats.items
+        if not mat_name in mat_list:
+            return False
+        if not mat_list[mat_name].ordeal == Ordeal.craft and next((mat for mat in self.craft.list if mat.item.name == mat_name), None): #is craft ordeal set on mat and is mat in a craft list?
+            return False
+        mat = mat_list[mat_name]
+        self.craft.list.remove(mat)
+        mat.ordeal = None
+
+        self.recursively_remove_materials(mat)
+        return True
+
+    #todo: continue here
 
