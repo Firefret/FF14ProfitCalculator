@@ -4,7 +4,7 @@ import aiohttp
 import asyncio
 from typing import TypeVar
 
-from universalis import fetch_item_market_data
+from universalis import fetch_item_sale_data
 
 T = TypeVar("T")
 
@@ -91,7 +91,7 @@ async def fetch_crafting_data(item: Item, session: aiohttp.ClientSession) -> Cra
     return crafting_data
 
 async def populate_item_data(item_name: str, server: World, session: aiohttp.ClientSession) -> Item | Craftable:
-    from garlandTools import fetch_and_apply_garland_data
+    from garlandTools import fetch_garland_data, apply_garland_data
     item = await fetch_item_base(item_name, session)
     print(f"Retrieving {item.name}. id: {item.id}")
 
@@ -105,15 +105,18 @@ async def populate_item_data(item_name: str, server: World, session: aiohttp.Cli
         item.craftable = crafting_data
 
     # Gatherability, Vendorability, Huntability, Icon
-    item = await fetch_and_apply_garland_data(item, server, session)
+    garland_data = await fetch_garland_data(item, server, session)
+    apply_garland_data(item, garland_data)
 
-    # Marketability
-    try:
-        market_data = await fetch_item_market_data(item, server, session)
-        item.marketable = market_data
-    except ValueError:
-        pass
-    cache_item(item)
+
+    #todo: rewrite so it collects listings, not sale history (fetch_item_market_data)
+    # Marketability is collected in a higher level function because we only need fetch_item_sale_data for top-level items, and listings fetch is done by 100's, no way to assign data formed that way here
+    #try:
+    #    market_data = await fetch_item_sale_data(item, server, session)
+    #    item.marketable = market_data
+    #except ValueError:
+    #    pass
+    cache_item(item, garland_data)
     return item
 
 async def fetch_full_item_data(item_name: str, server: World, session: aiohttp.ClientSession) -> Item | Craftable:

@@ -39,7 +39,7 @@ class Gatherable(Protocol):
     gatherable: GatheringData
 
 @dataclass
-class SalesData:
+class ItemSales:
     avg_buying_price: int | None = None #for visual purposes only, all the None fields are populated las, when universalis data is processed
     price_dynamics: float | None = None
     selling_velocity: float | None = None
@@ -63,13 +63,20 @@ class ListingData:
     hq: list[MarketListing|None]
     nq: list[MarketListing|None]
 
+    def __repr__(self):
+        return f"{len(self.hq)} HQ listings and {len(self.nq)} NQ listings"
+
+@dataclass
+class SalesData:
+    hq: ItemSales | None = None
+    nq: ItemSales | None = None
 
 
 @dataclass
 class MarketData:
     dc: DataCenter | None = None
-    NQ: SalesData | None = None
-    HQ: SalesData | None = None
+    sales: SalesData | None = None
+    listings: ListingData | None = None
 
 class Marketable(Protocol):
     marketable: MarketData

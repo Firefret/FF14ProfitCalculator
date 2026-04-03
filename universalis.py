@@ -16,10 +16,10 @@ from datetime import datetime, timedelta
 #this one will use world name as you can't sell on other worlds
 async def fetch_item_sale_history_month(item: Item, server: World, session: aiohttp.ClientSession):
     month_in_milliseconds = 2592000000
-    url = f"https://universalis.app/api/v2/history/{server.name}/{item.id}?statsWithin={month_in_milliseconds}&minSalePrice=0&maxSalePrice=2147483647"
+    url = f"https://universalis.app/api/v2/history/{server.name}/{item.id}?entriesWithin={month_in_milliseconds}&minSalePrice=0&maxSalePrice=2147483647"
     async with session.get(url) as response:
         if response.status != 200:
-            raise ValueError(f"No sale data for {item.name}, code {response.status}")
+            raise ValueError(f"The world/DC ({server.name}) or item ({item.name}) requested is invalid. ")
         sale_info = await response.json()
 
     if not sale_info["entries"]:
@@ -74,21 +74,21 @@ def analyze_sale_info(sale_info: dict):
         nq_dynamics = calculate_price_dynamics(nq_data)
         nq_sale_velocity = sale_info["nqSaleVelocity"]
         nq_last_sale_price = nq_data[0]["price"]
-        nq_market_data = SalesData(nq_last_sale_price, nq_dynamics, nq_sale_velocity)
+        nq_market_data = ItemSales(nq_last_sale_price, nq_dynamics, nq_sale_velocity)
 
     if hq_data:
         hq_dynamics = calculate_price_dynamics(hq_data)
         hq_sale_velocity = sale_info["hqSaleVelocity"]
         hq_last_sale_price = hq_data[0]["price"]
-        hq_market_data = SalesData(hq_last_sale_price, hq_dynamics, hq_sale_velocity)
+        hq_market_data = ItemSales(hq_last_sale_price, hq_dynamics, hq_sale_velocity)
 
     return nq_market_data, hq_market_data
 
-async def fetch_item_market_data(item: Item, server: World, session: aiohttp.ClientSession) -> MarketData:
+async def fetch_item_sale_data(item: Item, server: World, session: aiohttp.ClientSession) -> MarketData:
     sale_info = await fetch_item_sale_history_month(item, server, session)
     nq_market_data, hq_market_data, = analyze_sale_info(sale_info)
 
-    return MarketData(server.name, nq_market_data, hq_market_data)
+    return MarketData(server.dc, nq_market_data, hq_market_data)
 
 def separate_ids_by_100s(item_id_list:list):
     separated_lists = []
@@ -105,20 +105,21 @@ def separate_ids_by_100s(item_id_list:list):
 
     return separated_lists
 
-async def get_item_listings(all_item_list: list[Item], dc: DataCenter, session: aiohttp.ClientSession):
+async def get_item_listings(all_item_list: list[Item], dc: DataCenter, session: aiohttp.ClientSession) -> list[ListingData]:
     item_ids = list(map(lambda item: item.id, all_item_list))
     item_lists = separate_ids_by_100s(item_ids) # Universalis can accept 100 IDs at once, so we'll do it by 100's
-    listings = []
+    final_result = []
     for item_list in item_lists:
         item_list_copy = item_list.copy()
         id_string = ",".join(map(str, item_list))
+        print(f"id_string = {id_string}")
         url = f"https://universalis.app/api/v2/{dc.name}/{id_string}?entries=0"
         async with session.get(url) as response:
             if response.status == 400:
                 raise ValueError(f"400: The parameters are invalid")
             if response.status == 404:
-                raise ValueError(f"404: The world/DC or item requested is invalid.")# When requesting multiple items at once, an invalid item ID will not trigger this.
-                                                                                    # Instead, the returned list of unresolved item IDs will contain the invalid item ID or IDs.
+                raise ValueError(f"404: The world/DC or item requested is invalid.")  # When requesting multiple items at once, an invalid item ID will not trigger this.
+                                                                                      # Instead, the returned list of unresolved item IDs will contain the invalid item ID or IDs.
             if response.status != 200:
                 response.raise_for_status()
 
@@ -146,9 +147,9 @@ async def get_item_listings(all_item_list: list[Item], dc: DataCenter, session: 
 
                 item_list_copy[item_index] = ListingData(hq, nq)
 
-        listings = [*listings, *item_list_copy]
+        final_result = [*final_result, *item_list_copy]
 
-    return listings
+    return final_result
 
 
 

@@ -68,10 +68,10 @@ class OrdealList:
             # Market
             if mat.ordeal == Ordeal.market:
                 price = None
-                if mat.item.marketable.HQ: #somehow add NQ HQ toggle
-                    price = mat.item.marketable.HQ.avg_buying_price
-                elif mat.item.marketable.NQ:
-                    price = mat.item.marketable.NQ.avg_buying_price
+                if mat.item.marketable.sales.hq: #somehow add NQ HQ toggle
+                    price = mat.item.marketable.sales.hq.avg_buying_price
+                elif mat.item.marketable.sales.nq:
+                    price = mat.item.marketable.sales.nq.avg_buying_price
                 else:
                     continue
 
@@ -113,10 +113,10 @@ class OrdealList:
             # Market
             if mat.ordeal == Ordeal.market:
                 price = None
-                if mat.item.marketable.HQ:  # somehow add NQ HQ toggle
-                    price = mat.item.marketable.HQ.avg_buying_price
-                elif mat.item.marketable.NQ:
-                    price = mat.item.marketable.NQ.avg_buying_price
+                if mat.item.marketable.sales.hq:  # somehow add NQ HQ toggle
+                    price = mat.item.marketable.sales.hq.avg_buying_price
+                elif mat.item.marketable.sales.nq:
+                    price = mat.item.marketable.sales.nq.avg_buying_price
                 else:
                     continue
 

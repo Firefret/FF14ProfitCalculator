@@ -1,5 +1,3 @@
-from typing import List
-
 from itemTypes import *
 import re
 
@@ -25,7 +23,6 @@ class Material:
     amount: int
     flags: SourceFlags
     ordeal: Ordeal | None = None
-    purchase_route: list | None = None#or a dict of DC world keys, each element is itself a dict with mat, None for now
 
     def set_default_flag(self, priority: list[Ordeal]):
         for ordeal in reversed(priority):

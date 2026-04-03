@@ -28,7 +28,7 @@ async def fetch_top_item_data(item_name: str, server: World) -> Item | Craftable
         # Gatherability, Vendorability, Huntability, Icon
         item = await fetch_and_apply_garland_data(item, server, session)
         # Marketability
-        item.marketable = await fetch_item_market_data(item, server, session)
+        item.marketable = await fetch_item_sale_data(item, server, session)
         cache_item(item)
         return item
 
@@ -87,8 +87,22 @@ def form_divided_material_list(wishlist: Wishlist) -> MaterialListDivided:
     mat_list_div = MaterialListDivided(MaterialList({}), MaterialList({}))
     for entry in wishlist.items.values():
         recursive_mat_sweep_and_add(entry.item, entry.amount, mat_list_div)
-
     return mat_list_div
+
+async def mat_list_fetch_and_apply_market_listings(mat_list: MaterialList, dc: DataCenter, session: aiohttp.ClientSession):
+    # get a list of all tradeable mats
+    item_list = []
+    for name, mat in mat_list.items.items():
+        garland_data = get_cached_garland_data(name)
+        if garland_data is None:
+            continue
+        if garland_data["is_tradeable"]:
+            item_list.append(mat.item)
+    listings = await get_item_listings(item_list, dc, session)
+    for index, item in enumerate(item_list):
+        mat = mat_list.items[item.name]
+        market_data = MarketData(dc=dc, listings=listings[index])
+        mat.item.marketable = market_data
 
 
 def timed_fetch(item_name: str) -> Item | Craftable | Marketable:
@@ -98,8 +112,6 @@ def timed_fetch(item_name: str) -> Item | Craftable | Marketable:
     print(f"fetch_top_item_data({item_name!r}) took {elapsed:.3f}s")
     return result
 
-
-# main.py
 
 async def test_entry_point():
     wishlist = Wishlist({})
@@ -123,11 +135,18 @@ async def test_entry_point():
         await asyncio.gather(*tasks)
 
         # 3. Now the shopping list will actually have data
-        div_mat_list = form_divided_material_list(wishlist)
-        ordeal_list = OrdealList(div_mat_list)
+        div_mat_list: MaterialListDivided = form_divided_material_list(wishlist)
+
+        # this is a weird place to put market listing fetch in but it's the earliest we get a list of all mats, and universalis api needs a list of item IDs
+        # i could do it one-by-one async, but ratelimit is 30req\s and i would really rather not tackle throttling
+        await mat_list_fetch_and_apply_market_listings(div_mat_list.low_mats, world.dc, session)
+        await mat_list_fetch_and_apply_market_listings(div_mat_list.mid_mats, world.dc, session)
+
         print(div_mat_list)
-        print(ordeal_list)
-        print(await get_item_listings(div_mat_list.mid_mats.items["Grade 4 Gemsap of Vitality"].item.craftable.ingredients[0], world.dc, session))
+        return div_mat_list
+        ordeal_list = OrdealList(div_mat_list)
+
+        #print(await get_item_listings(div_mat_list.mid_mats.items["Grade 4 Gemsap of Vitality"].item.craftable.ingredients[0], world.dc, session))
 
 
 

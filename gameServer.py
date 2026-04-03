@@ -9,7 +9,7 @@ class DataCenter:
         self.worlds: list[World] = []  # Map of Name -> World Object
 
     def __repr__(self):
-        return f"\n<DataCenter {self.name} (Worlds: {self.worlds})>"
+        return f"\n<DataCenter {self.name}>"
 
 class World:
     def __init__(self, name: str, dc: DataCenter):
