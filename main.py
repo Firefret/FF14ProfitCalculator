@@ -26,10 +26,11 @@ async def fetch_top_item_data(item_name: str, server: World) -> Item | Craftable
             item.craftable = crafting_data
 
         # Gatherability, Vendorability, Huntability, Icon
-        item = await fetch_and_apply_garland_data(item, server, session)
+        garland_data = await fetch_garland_data(item, server, session)
+        apply_garland_data(item, garland_data)
         # Marketability
         item.marketable = await fetch_item_sale_data(item, server, session)
-        cache_item(item)
+        cache_item(item, garland_data)
         return item
 
 
@@ -95,9 +96,12 @@ async def mat_list_fetch_and_apply_market_listings(mat_list: MaterialList, dc: D
     for name, mat in mat_list.items.items():
         garland_data = get_cached_garland_data(name)
         if garland_data is None:
+            print(f"No garland_data for {name}")
             continue
         if garland_data["is_tradeable"]:
             item_list.append(mat.item)
+        else:
+            print(f"name does not seem to be tradeable, garlandData view: {garland_data}")
     listings = await get_item_listings(item_list, dc, session)
     for index, item in enumerate(item_list):
         mat = mat_list.items[item.name]
