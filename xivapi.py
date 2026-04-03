@@ -109,7 +109,7 @@ async def populate_item_data(item_name: str, server: World, session: aiohttp.Cli
     apply_garland_data(item, garland_data)
 
 
-    #todo: rewrite so it collects listings, not sale history (fetch_item_market_data)
+
     # Marketability is collected in a higher level function because we only need fetch_item_sale_data for top-level items, and listings fetch is done by 100's, no way to assign data formed that way here
     #try:
     #    market_data = await fetch_item_sale_data(item, server, session)
