@@ -6,6 +6,7 @@ from ordealList import *
 import time
 import math
 from universalis import *
+from config import FLAG_PRIORITY, DEFAULT_QUALITY
 
 async def fetch_top_item_data(item_name: str, server: World) -> Item | Craftable | Marketable:
     async with aiohttp.ClientSession() as session:
@@ -49,7 +50,7 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
             # Create and add the current item to mid_mats
             flags = item.get_material_flags()
             mat = Material(item, amount, flags)
-            mat.set_default_flag(flag_priority)
+            mat.set_default_ordeal(flag_priority)
             mat_list_div.mid_mats.add(mat)
 
         # 2. Now calculate how many crafts we need to satisfy the amount
@@ -67,13 +68,13 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
     else:
         flags = item.get_material_flags()
         mat = Material(item, amount, flags)
-        mat.set_default_flag(flag_priority)
+        mat.set_default_ordeal(flag_priority)
         mat_list_div.low_mats.add(mat)
 
 def form_divided_material_list(wishlist: Wishlist) -> MaterialListDivided:
     mat_list_div = MaterialListDivided(MaterialList({}), MaterialList({}))
     for entry in wishlist.items.values():
-        recursive_mat_sweep_and_add(entry.item, entry.amount, mat_list_div)
+        recursive_mat_sweep_and_add(entry.item, entry.amount, mat_list_div, FLAG_PRIORITY)
     return mat_list_div
 
 async def mat_list_fetch_and_apply_market_listings(mat_list: MaterialList, dc: DataCenter, session: aiohttp.ClientSession):
@@ -132,8 +133,10 @@ async def test_entry_point():
         await mat_list_fetch_and_apply_market_listings(div_mat_list.low_mats, world.dc, session)
         await mat_list_fetch_and_apply_market_listings(div_mat_list.mid_mats, world.dc, session)
 
-        print(div_mat_list)
+
         ordeal_list = OrdealList(div_mat_list)
+        ordeal_list.remove_flag_craft("Ra'Kaznar Ingot")
+        print(ordeal_list.mats)
         print(ordeal_list)
 
         #print(await get_item_listings(div_mat_list.mid_mats.items["Grade 4 Gemsap of Vitality"].item.craftable.ingredients[0], world.dc, session))

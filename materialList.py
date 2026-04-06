@@ -1,4 +1,6 @@
 from itemTypes import *
+from dataclasses import dataclass
+from enum import Enum
 import re
 
 class Ordeal(Enum):
@@ -10,21 +12,15 @@ class Ordeal(Enum):
 
 
 @dataclass
-class SourceFlags:
-    is_craftable: bool
-    is_vendorable: bool
-    is_gatherable: bool
-    is_huntable: bool
-    is_marketable: bool
-
-@dataclass
 class Material:
+
     item: Item
     amount: int
     flags: SourceFlags
     ordeal: Ordeal | None = None
+    quality: bool  | None = None
 
-    def set_default_flag(self, priority: list[Ordeal]):
+    def set_default_ordeal(self, priority: list[Ordeal]):
         for ordeal in reversed(priority):
             attr_name = f"is_{ordeal.value}able"
             if getattr(self.flags, attr_name, False):
