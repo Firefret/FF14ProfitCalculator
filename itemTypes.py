@@ -60,9 +60,17 @@ class MarketListing:
         self.price_per_unit = round(self.price / self.quantity)
 
 @dataclass
+class MarketRoute:
+    total_cost: int
+    total_amount: int
+    listings: list[MarketListing]
+
+@dataclass
 class ListingData:
-    hq: list[MarketListing|None]
-    nq: list[MarketListing|None]
+    hq: list[MarketListing | None]
+    nq: list[MarketListing | None]
+    nq_routes: list[MarketRoute | None] | None = None
+    hq_routes: list[MarketRoute | None] | None = None
 
     def __repr__(self):
         return f"{len(self.hq)} HQ listings and {len(self.nq)} NQ listings"
@@ -97,11 +105,11 @@ class VendorListing:
 
 @dataclass
 class SourceFlags:
-    is_craftable: bool
-    is_vendorable: bool
-    is_gatherable: bool
-    is_huntable: bool
-    is_marketable: bool
+    craft: bool
+    vendor: bool
+    gather: bool
+    hunt: bool
+    market: bool
 
 @dataclass
 class VendorData:

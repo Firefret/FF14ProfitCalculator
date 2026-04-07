@@ -147,6 +147,16 @@ async def get_item_listings(all_item_list: list[Item], dc: DataCenter, session: 
 
                 item_list_copy[item_index] = ListingData(hq, nq)
 
+                #create arrays for marketboard ordeal routes
+                hq_amount = 0
+                nq_amount = 0
+                for listing in item_list_copy[item_index].hq:
+                    hq_amount += listing.quantity
+                for listing in item_list_copy[item_index].nq:
+                    nq_amount += listing.quantity
+                item_list_copy[item_index].nq_routes = [None] * nq_amount
+                item_list_copy[item_index].hq_routes = [None] * hq_amount
+
         final_result = [*final_result, *item_list_copy]
 
     return final_result

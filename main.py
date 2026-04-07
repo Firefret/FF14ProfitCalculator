@@ -50,7 +50,7 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
             # Create and add the current item to mid_mats
             flags = item.get_material_flags()
             mat = Material(item, amount, flags)
-            mat.set_default_ordeal(flag_priority)
+            #mat.set_default_ordeal(flag_priority)
             mat_list_div.mid_mats.add(mat)
 
         # 2. Now calculate how many crafts we need to satisfy the amount
@@ -68,7 +68,7 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
     else:
         flags = item.get_material_flags()
         mat = Material(item, amount, flags)
-        mat.set_default_ordeal(flag_priority)
+        #mat.set_default_ordeal(flag_priority)
         mat_list_div.low_mats.add(mat)
 
 def form_divided_material_list(wishlist: Wishlist) -> MaterialListDivided:

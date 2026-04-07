@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import math
+from operator import attrgetter
+
 from materialList import *
 from dataclasses import dataclass
 
@@ -21,79 +23,21 @@ class MarketEntry: #
     def __init__(self, material: Material, parent: Market):
         self.material = material
         self.parent = parent
-        self.set_quality()
         self.quality = self.material.quality if self.material.quality is not None else None
 
-    @property
-    def nq(self) -> bool:
-        amount_needed = self.material.amount
-        nq_amount = 0
-        is_nq_enough = False
-        for listing in self.material.item.marketable.listings.nq:
-            nq_amount += listing.quantity
-            if nq_amount >= amount_needed:
-                is_nq_enough = True
-                break
-        return is_nq_enough
+        if self.quality:
+            routes = self.material.item.marketable.listings.hq_routes
+        else:
+            routes = self.material.item.marketable.listings.nq_routes
+
+        if routes[material.amount] is None:
+            routes[material.amount] = self.resolve_best_listings
+        self.route = routes[material.amount]
+
+
 
     @property
-    def hq(self) -> bool:
-        amount_needed = self.material.amount
-        hq_amount = 0
-        is_hq_enough = False
-        for listing in self.material.item.marketable.listings.hq:
-            hq_amount += listing.quantity
-            if hq_amount >= amount_needed:
-                is_hq_enough = True
-                break
-        return is_hq_enough
-
-    #def resolve_quality(self):
-
-    def set_quality(self, quality = None) -> bool:
-        from config import DEFAULT_QUALITY
-        if quality is None: #this sets default or the other one available
-            quality = DEFAULT_QUALITY
-
-            if quality: #True if default is HQ
-                if self.hq:
-                    self.material.quality = True
-                    return True
-                elif self.nq:
-                    self.material.quality = False
-                    return True
-            else:
-                if self.nq:
-                    self.material.quality = False
-                    return True
-                elif self.hq:
-                    self.material.quality = True
-                    return True
-            return False
-        else: #this sets what was provided if possible, returns False if not
-            if quality and self.hq:
-                self.material.quality = True
-                return True
-            elif not quality and self.nq:
-                self.material.quality = False
-                return True
-            else:
-                return False
-
-    def available_amount_handler(self):
-        from config import FLAG_PRIORITY
-        if not self.nq and not self.hq:
-            priority = FLAG_PRIORITY
-            priority.remove(Ordeal.market)
-            self.material.ordeal = None
-            self.material.set_default_ordeal(priority)
-            if self.material.ordeal is None:
-                raise ValueError(f"Not enough {self.material.item.name} on market ({self.material.amount}) and no other item sources found! ({self.material.flags})")
-            return False
-        return True
-
-    @property
-    def resolve_best_listings(self):
+    def resolve_best_listings(self) -> MarketRoute:
         target_amount = self.material.amount
         quality = self.quality
 
@@ -150,7 +94,7 @@ class MarketEntry: #
                 best_amount = x
 
         # reconstruct the listings used
-        result = []
+        result: list[MarketListing] = []
         cur = best_amount
 
         while cur > 0:
@@ -158,7 +102,9 @@ class MarketEntry: #
             result.append(listings[i])
             cur = prev[cur]
 
-        return {"total_cost": min_cost[best_amount], "total_amount": best_amount, "listings": result}
+        result.sort(key=attrgetter('world', 'quantity'))
+
+        return MarketRoute(int(min_cost[best_amount]), best_amount, result)
 
 
 
@@ -264,8 +210,11 @@ class OrdealList:
     gather: Gather | None = None
     hunt: Hunt | None = None
 
-    def __init__(self, mats: MaterialListDivided):
+    def __init__(self, mats: MaterialListDivided, priority = None):
         self.mats = mats
+        if priority is None:
+            from config import FLAG_PRIORITY
+            priority = FLAG_PRIORITY
 
         market_entries = []
         vendor_entries = []
@@ -275,6 +224,7 @@ class OrdealList:
 
         #LOW MATS
         for mat in self.mats.low_mats.items.values():
+            mat.set_default_ordeal(priority)
 
             # Market
             if mat.ordeal == Ordeal.market:
@@ -304,6 +254,8 @@ class OrdealList:
 
         #MID MATS
         for mat in self.mats.mid_mats.items.values():
+            mat.set_default_ordeal(priority)
+
             # Market
             if mat.ordeal == Ordeal.market:
                 price = None
