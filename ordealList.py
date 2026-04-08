@@ -1,8 +1,5 @@
 from __future__ import annotations
-
 import math
-from operator import attrgetter
-
 from materialList import *
 from dataclasses import dataclass
 
@@ -238,7 +235,8 @@ class Gather:
     @property
     def entries(self)  -> entries[Material]:
         mats = []
-        for mat in self.parent.mats.mid_mats.items.values():
+        joined_list = list(self.parent.mats.low_mats.items.values()) + list(self.parent.mats.mid_mats.items.values())
+        for mat in joined_list:
             if mat.ordeal == Ordeal.gather and mat.amount > 0:
                 mats.append(mat)
         return mats
@@ -255,7 +253,8 @@ class Hunt:
     @property
     def entries(self) -> list[Material]:
         mats = []
-        for mat in self.parent.mats.mid_mats.items.values():
+        joined_list = list(self.parent.mats.low_mats.items.values()) + list(self.parent.mats.mid_mats.items.values())
+        for mat in joined_list:
             if mat.ordeal == Ordeal.hunt and mat.amount > 0:
                 mats.append(mat)
         return mats
