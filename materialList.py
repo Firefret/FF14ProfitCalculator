@@ -4,6 +4,9 @@ from itemTypes import *
 from enum import Enum
 import re
 
+from itemTypes import SourceFlags
+
+
 class Ordeal(Enum):
     craft = "craft"
     vendor = "vendor"
@@ -21,18 +24,25 @@ class Material:
     ordeal: Ordeal | None = None
     quality: bool  | None = None
 
-    def __init__(self, item: Item, amount:int, flags: SourceFlags):
+    def __init__(self, item: Item, amount:int):
         self.item = item
         self.amount = amount
-        self.flags = flags
-        self.set_quality()
+
+    def is_crystal(self):
+        if re.search(r"^(Fire|Ice|Lightning|Water|Earth|Wind)\s(Shard|Crystal|Cluster)$", self.item.name):
+            return True
+        return False
 
     def set_default_ordeal(self, priority: list[Ordeal]):
+        if self.is_crystal():
+            return
         for ordeal in reversed(priority):
             attr_name = ordeal.value
             if attr_name == "market" and hasattr(self.flags, attr_name):
-                self.available_amount_handler(priority)
-                break #because available_amount_handler() has its own set_default_ordeal call with market excluded from ordeal priority
+                print(self)
+                if self.available_amount_handler(priority):
+                    self.ordeal = Ordeal.market
+                #break #because available_amount_handler() has its own set_default_ordeal call with market excluded from ordeal priority
             if getattr(self.flags, attr_name):
                 self.ordeal = ordeal
 
@@ -124,7 +134,15 @@ class Material:
             else:
                 return False
 
-    #def remove_ordeal_craft(self):
+    @property
+    def flags(self) -> SourceFlags:
+        flags = SourceFlags(craft=True if self.item.craftable else False,
+                            vendor=True if self.item.vendorable else False,
+                            gather=True if self.item.gatherable else False,
+                            hunt=True if self.item.huntable else False,
+                            market=True if self.item.marketable else False)
+
+        return flags
 
 
 @dataclass
@@ -132,9 +150,12 @@ class MaterialList: #let it know about the game server somehow
     items: dict[str, Material]
 
 
-    def add(self, mat: Material):
-        if mat.item.name in self.items:
-            self.items[mat.item.name].amount += mat.amount
+    def add(self, mat: Material, amount = None):
+        if mat in self.items.values():
+            if amount is None:
+                self.items[mat.item.name].amount += mat.amount
+            else:
+                self.items[mat.item.name].amount += amount
         else:
             self.items[mat.item.name] = mat
             self.sort()
@@ -210,5 +231,8 @@ class MaterialListDivided:
     mid_mats: MaterialList
     low_mats: MaterialList
 
+
     def __repr__(self):
         return f"\n--MID MATS--\n{self.mid_mats.__str__()}\n--LOW MATS--\n{self.low_mats.__str__()}"
+
+

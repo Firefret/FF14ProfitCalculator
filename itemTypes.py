@@ -114,6 +114,14 @@ class SourceFlags:
 @dataclass
 class VendorData:
     listings: set[VendorListing]
+    chosen_listing: tuple[str, VendorListing] | None = None
+
+    def choose_listing(self, vendor_listing: VendorListing | None) -> bool:
+        if vendor_listing in self.listings:
+            self.chosen_listing = (vendor_listing.currency.name, vendor_listing)
+            return True
+        else:
+            return False
 
 class Vendorable(Protocol):
     vendorable: VendorData
@@ -132,17 +140,6 @@ class Item:
 
     def __hash__(self) -> int:
         return hash(self.id)
-
-    def get_material_flags(self) -> SourceFlags:
-        from materialList import SourceFlags
-        flags = SourceFlags(is_craftable=True if self.craftable else False,
-                            is_vendorable=True if self.vendorable else False,
-                            is_gatherable=True if self.gatherable else False,
-                            is_huntable=True if self.huntable else False,
-                            is_marketable=True if self.marketable else False)
-
-        return flags
-
 
 
 def is_craftable(item: Item) -> bool:

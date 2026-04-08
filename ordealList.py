@@ -8,11 +8,14 @@ from dataclasses import dataclass
 
 
 class Craft:
+    parent: OrdealList
+    entries: list[MarketEntry]
+
     def __init__(self, parent: OrdealList):
         self.parent = parent
 
     @property
-    def list(self)  -> list[Material]:
+    def entries(self)  -> list[Material]:
         mats = []
         for mat in self.parent.mats.mid_mats.items.values():
             if mat.ordeal == Ordeal.craft and mat.amount > 0:
@@ -20,23 +23,32 @@ class Craft:
         return mats
 
 class MarketEntry: #
-    def __init__(self, material: Material, parent: Market):
+    def __init__(self, material: Material):
         self.material = material
-        self.parent = parent
-        self.quality = self.material.quality if self.material.quality is not None else None
+        material.set_quality()
 
+    @property
+    def quality(self):
+        if self.material.quality is not None:
+            return self.material.quality
+        else:
+            return None
+
+    @property
+    def route(self):
         if self.quality:
             routes = self.material.item.marketable.listings.hq_routes
         else:
             routes = self.material.item.marketable.listings.nq_routes
 
-        if routes[material.amount] is None:
-            routes[material.amount] = self.resolve_best_listings
-        self.route = routes[material.amount]
-
-
+        if routes[self.material.amount] is None:
+            routes[self.material.amount] = self.resolve_best_listings()
+        return routes[self.material.amount]
 
     @property
+    def overall_price(self) -> int:
+        return self.route.total_cost
+
     def resolve_best_listings(self) -> MarketRoute:
         target_amount = self.material.amount
         quality = self.quality
@@ -102,7 +114,7 @@ class MarketEntry: #
             result.append(listings[i])
             cur = prev[cur]
 
-        result.sort(key=attrgetter('world', 'quantity'))
+        result.sort(key=lambda listing: (listing.world.name, listing.quantity))
 
         return MarketRoute(int(min_cost[best_amount]), best_amount, result)
 
@@ -110,26 +122,33 @@ class MarketEntry: #
 
 @dataclass
 class Market:
+    parent: OrdealList
+    entries: list[MarketEntry]
+
     def __init__(self, parent: OrdealList):
         self.parent = parent
-        market_list = self.list
+
     @property
-    def list(self)  -> list[MarketEntry]:
+    def entries(self)  -> list[MarketEntry]:
         market_entries = []
         joined_list = list(self.parent.mats.low_mats.items.values()) + list(self.parent.mats.mid_mats.items.values())
         for mat in joined_list:
+            print(f"listing {mat.item.name}, ordeal is {mat.ordeal}, flags are {mat.flags}, amount is {mat.amount}")
             if mat.ordeal == Ordeal.market and mat.amount > 0:
-                market_entry = (MarketEntry(mat, self))
-                is_enough = market_entry.available_amount_handler()
-                if is_enough:
-                    market_entries.append(market_entry)
+
+                print(f"{mat.item.name} added to market ordeal list")
+                market_entry = (MarketEntry(mat))
+                market_entries.append(market_entry)
         return market_entries
+
+    def __repr__(self):
+        return f"Market({self.entries})"
 
 
     @property
     def overall_price(self) -> int:
         result = 0
-        for entry in self.list:
+        for entry in self.entries:
             result += entry.overall_price
         return result
 
@@ -146,12 +165,6 @@ class VendorEntry:
 
     def __init__(self, mat: Material):
         self.material = mat
-        first_key = next(iter(self.listings))
-        chosen_listing = (first_key, self.listings[first_key])
-        for name, listing in self.listings.items():
-            if any(x in name for x in ["Scrip", "Tomestone", "Bicolor"]):
-                chosen_listing = (name, listing)
-        self.chosen_listing = chosen_listing
 
     @property
     def listings(self) -> dict[str, VendorListing]:
@@ -164,20 +177,44 @@ class VendorEntry:
     def listings(self, value):
         pass
 
+    @property
+    def chosen_listing(self) -> tuple[str, VendorListing]:
+        listing = self.material.item.vendorable.chosen_listing
+        if listing is None:
+            first_key = next(iter(self.listings))
+            chosen_listing = (first_key, self.listings[first_key])
+            for name, listing in self.listings.items():
+                if any(x in name for x in ["Scrip", "Tomestone", "Bicolor"]):
+                    chosen_listing = (name, listing)
+            self.material.item.vendorable.chosen_listing = chosen_listing
+        return self.material.item.vendorable.chosen_listing
+
 
 
 @dataclass
 class Vendor:
-    list: list[VendorEntry]
+    parent: OrdealList
+    entries: list[VendorEntry]
     currencies_needed: dict[str, tuple[Item, int]]
 
-    def __init__(self, list: list[VendorEntry]):
-        self.list = list
+    def __init__(self, parent: OrdealList):
+        self.parent = parent
+
+    @property
+    def entries(self) -> list[VendorEntry]:
+        vendor_entries = []
+        joined_list = list(self.parent.mats.low_mats.items.values()) + list(
+            self.parent.mats.mid_mats.items.values())
+        for mat in joined_list:
+            if mat.ordeal == Ordeal.vendor and mat.amount > 0:
+                vendor_entry = (VendorEntry(mat))
+                vendor_entries.append(vendor_entry)
+        return vendor_entries
 
     @property
     def currencies_needed(self) -> dict[str, tuple[Item, int]]:
         dictionary = {}
-        for entry in self.list:
+        for entry in self.entries:
             purchases_needed = math.ceil(entry.material.amount / entry.chosen_listing[1].amount)
             cost_per_purchase = entry.chosen_listing[1].cost
             total_currency_cost = purchases_needed * cost_per_purchase
@@ -189,14 +226,49 @@ class Vendor:
         return dictionary
 
 
+
 @dataclass
 class Gather:
-    list: list[Material]
+    parent: OrdealList
+    entries: entries[Material]
+
+    def __init__(self, parent: OrdealList):
+        self.parent = parent
+
+    @property
+    def entries(self)  -> entries[Material]:
+        mats = []
+        for mat in self.parent.mats.mid_mats.items.values():
+            if mat.ordeal == Ordeal.gather and mat.amount > 0:
+                mats.append(mat)
+        return mats
 
 @dataclass
 class Hunt:
-    list: list[Material]
-    targets: list[str]
+    parent: OrdealList
+    entries: list[Material]
+    targets: dict[str, tuple[int, list[str]]]
+
+    def __init__(self, parent: OrdealList):
+        self.parent = parent
+
+    @property
+    def entries(self) -> list[Material]:
+        mats = []
+        for mat in self.parent.mats.mid_mats.items.values():
+            if mat.ordeal == Ordeal.hunt and mat.amount > 0:
+                mats.append(mat)
+        return mats
+
+    @property
+    def targets(self) -> dict[str, tuple[int, list[str]]]:
+        targets_dict = {}
+        for mat in self.entries:
+            targets = (mat.amount, mat.item.huntable.drops_from)
+            targets_dict[mat.item.name] = targets
+        return targets_dict
+
+
 
 
 
@@ -216,89 +288,13 @@ class OrdealList:
             from config import FLAG_PRIORITY
             priority = FLAG_PRIORITY
 
-        market_entries = []
-        vendor_entries = []
-        gather_entries = []
-        hunt_entries = []
-        craft_entries = []
-
-        #LOW MATS
-        for mat in self.mats.low_mats.items.values():
+        for mat in (self.mats.mid_mats.items|self.mats.low_mats.items).values():
             mat.set_default_ordeal(priority)
-
-            # Market
-            if mat.ordeal == Ordeal.market:
-                price = None
-                if mat.item.marketable.sales.hq: #somehow add NQ HQ toggle
-                    price = mat.item.marketable.sales.hq.avg_buying_price
-                elif mat.item.marketable.sales.nq:
-                    price = mat.item.marketable.sales.nq.avg_buying_price
-                else:
-                    continue
-
-                entry = MarketEntry(mat, price, price*mat.amount)
-                market_entries.append(entry)
-
-            # Vendor
-            elif mat.ordeal == Ordeal.vendor:
-                entry = VendorEntry(mat)
-                vendor_entries.append(entry)
-
-            # Gather
-            elif mat.ordeal == Ordeal.gather:
-                gather_entries.append(mat)
-
-            # Hunt
-            elif mat.ordeal == Ordeal.hunt:
-                hunt_entries.append(mat)
-
-        #MID MATS
-        for mat in self.mats.mid_mats.items.values():
-            mat.set_default_ordeal(priority)
-
-            # Market
-            if mat.ordeal == Ordeal.market:
-                price = None
-                if mat.item.marketable.sales.hq:  # somehow add NQ HQ toggle
-                    price = mat.item.marketable.sales.hq.avg_buying_price
-                elif mat.item.marketable.sales.nq:
-                    price = mat.item.marketable.sales.nq.avg_buying_price
-                else:
-                    continue
-
-                entry = MarketEntry(mat, price, price * mat.amount)
-                market_entries.append(entry)
-
-            # Vendor
-            elif mat.ordeal == Ordeal.vendor:
-                entry = VendorEntry(mat)
-                vendor_entries.append(entry)
-
-            # Gather
-            elif mat.ordeal == Ordeal.gather:
-                gather_entries.append(mat)
-
-            # Hunt
-            elif mat.ordeal == Ordeal.hunt:
-                hunt_entries.append(mat)
-
 
         self.market = Market(self)
-
-        if vendor_entries:
-            self.vendor = Vendor(vendor_entries)
-
-        if gather_entries:
-            self.gather = Gather(gather_entries)
-
-        if hunt_entries:
-            targets = []
-            for mat in hunt_entries:
-                target = mat.item.huntable.drops_from[0]
-                if target not in targets:
-                    targets.append(mat.item.huntable.drops_from[0])
-            self.hunt = Hunt(hunt_entries, targets)
-
+        self.vendor = Vendor(self)
+        self.gather = Gather(self)
+        self.hunt = Hunt(self)
         self.craft = Craft(self)
 
     def __repr__(self):
@@ -309,37 +305,36 @@ class OrdealList:
         # MARKET SECTION
         if self.market:
             sections.append(f"\n[ MARKET BOARD ] - Total: {self.market.overall_price:,} Gil")
-            for m in self.market.list:
+            for m in self.market.entries:
                 if m.material.amount == 0:
                     continue
-                sections.append(f"  x{m.material.amount:<4} {m.material.item.name:<30} @ {m.price_per_item:>8,} Gil")
+                sections.append(f"  x{m.material.amount:<4} {m.material.item.name:<30} @ {m.overall_price:>8,} Gil")
 
         # VENDOR SECTION
         if self.vendor:
             sections.append(f"\n[ VENDOR PROCUREMENT ]")
             for currency, (item, cost) in self.vendor.currencies_needed.items():
                 sections.append(f"  > Need {cost:,} {currency}")
-            for v in self.vendor.list:
-                sections.append(f"    - {v.material.item.name:<30} (via {v.chosen_listing[0]})")
+            for v in self.vendor.entries:
+                sections.append(f"    - {v.material.item.name:<30} (x{math.ceil(v.material.amount/v.chosen_listing[1].amount)*v.chosen_listing[1].cost} {v.chosen_listing[0]})")
 
         # CRAFT SECTION
         if self.craft:
             sections.append(f"\n[ CRAFTING REQUIRED ]")
-            for c in self.craft.list:
+            for c in self.craft.entries:
                 sections.append(f"  x{c.amount:<4} {c.item.name}")
 
         # GATHER SECTION
         if self.gather:
             sections.append(f"\n[ GATHERING LOG ]")
-            for g in self.gather.list:
+            for g in self.gather.entries:
                 sections.append(f"  x{g.amount:<4} {g.item.name}")
 
         # HUNT SECTION
         if self.hunt:
             sections.append(f"\n[ HUNTING TARGETS ]")
-            sections.append(f"  Targets: {', '.join(self.hunt.targets)}")
-            for h in self.hunt.list:
-                sections.append(f"  x{h.amount:<4} {h.item.name}")
+            for mat_name, targets in self.hunt.targets.items():
+                sections.append(f"  x{targets[0]:<4} {mat_name}: {targets[1]}")
 
         sections.append("\n" + divider)
         return "\n".join(sections)
@@ -359,25 +354,46 @@ class OrdealList:
             else:
                 low_mats.remove(ingredient.name, total_amount)
 
+    def recursively_add_materials(self, mat: Material, amount=None):
+        if amount is None:
+            amount = mat.amount
+
+        mid_mats = self.mats.mid_mats
+        low_mats = self.mats.low_mats
+        for ingredient, ing_amount in zip(mat.item.craftable.ingredients[0], mat.item.craftable.ingredients[1]):
+            total_amount = amount * ing_amount
+            if ingredient.craftable:
+
+                self.recursively_add_materials(mid_mats.items[ingredient.name], total_amount)
+                mid_mats.add(mid_mats.items[ingredient.name], total_amount)
+            else:
+                low_mats.add(low_mats.items[ingredient.name], total_amount)
+
+
     def remove_flag_craft(self, mat_name: str):
         mat_list = self.mats.mid_mats.items
         if not mat_name in mat_list:
             return False
-        if mat_list[mat_name].ordeal == Ordeal.craft and next((mat for mat in self.craft.list if mat.item.name == mat_name), None): #is craft ordeal set on mat and is mat in a craft list?
-            return False
-        mat = mat_list[mat_name]
-        mat.ordeal = None
+        if mat_list[mat_name].ordeal == Ordeal.craft: #is craft ordeal set on mat?
+            mat = mat_list[mat_name]
+            mat.ordeal = None
 
-        self.recursively_remove_materials(mat)
-        return True
+            self.recursively_remove_materials(mat)
+            return True
+        return False
 
     def add_flag_craft(self, mat_name: str):
         mat_list = self.mats.mid_mats.items
         if not mat_name in mat_list:
             return False
         #No craft flag check because if it is in mid-mats, mat.flags.is_craftable should be true already
-        if not mat_list[mat_name].ordeal == Ordeal.craft and not next((mat for mat in self.craft.list if mat.item.name == mat_name), None): #is craft ordeal not set on mat and is mat not in a craft list?
-            return False
+        if not mat_list[mat_name].ordeal == Ordeal.craft: #is craft ordeal not set on mat, and is mat not in a craft list?
+            mat = mat_list[mat_name]
+            mat.ordeal = None
+
+            self.recursively_add_materials(mat)
+
+        return False
 
     #todo: continue here
 

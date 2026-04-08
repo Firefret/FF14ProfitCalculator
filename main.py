@@ -1,3 +1,4 @@
+
 from xivapi import *
 from garlandTools import *
 from itemRequest import *
@@ -48,8 +49,7 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
     if item.craftable:
         if depth > 0: #Don't need topmost items, those are the ones you gonna craft
             # Create and add the current item to mid_mats
-            flags = item.get_material_flags()
-            mat = Material(item, amount, flags)
+            mat = Material(item, amount)
             #mat.set_default_ordeal(flag_priority)
             mat_list_div.mid_mats.add(mat)
 
@@ -66,8 +66,7 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
             recursive_mat_sweep_and_add(ingredient, total_ing_needed, mat_list_div, flag_priority, depth+1)
 
     else:
-        flags = item.get_material_flags()
-        mat = Material(item, amount, flags)
+        mat = Material(item, amount)
         #mat.set_default_ordeal(flag_priority)
         mat_list_div.low_mats.add(mat)
 
@@ -88,7 +87,7 @@ async def mat_list_fetch_and_apply_market_listings(mat_list: MaterialList, dc: D
         if garland_data["is_tradeable"]:
             item_list.append(mat.item)
         else:
-            print(f"name does not seem to be tradeable, garlandData view: {garland_data}")
+            print(f"{name} does not seem to be tradeable, garlandData view: {garland_data}")
     listings = await get_item_listings(item_list, dc, session)
     for index, item in enumerate(item_list):
         mat = mat_list.items[item.name]
@@ -135,7 +134,7 @@ async def test_entry_point():
 
 
         ordeal_list = OrdealList(div_mat_list)
-        ordeal_list.remove_flag_craft("Ra'Kaznar Ingot")
+        #ordeal_list.remove_flag_craft("Ra'Kaznar Ingot")
         print(ordeal_list.mats)
         print(ordeal_list)
 
