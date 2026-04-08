@@ -137,6 +137,7 @@ async def test_entry_point():
         #ordeal_list.remove_flag_craft("Ra'Kaznar Ingot")
         print(ordeal_list.mats)
         print(ordeal_list)
+        print(ordeal_list.market.route)
 
         #print(await get_item_listings(div_mat_list.mid_mats.items["Grade 4 Gemsap of Vitality"].item.craftable.ingredients[0], world.dc, session))
 

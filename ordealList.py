@@ -32,7 +32,7 @@ class MarketEntry: #
             return None
 
     @property
-    def route(self):
+    def route(self) -> MarketRoute:
         if self.quality:
             routes = self.material.item.marketable.listings.hq_routes
         else:
@@ -41,6 +41,10 @@ class MarketEntry: #
         if routes[self.material.amount] is None:
             routes[self.material.amount] = self.resolve_best_listings()
         return routes[self.material.amount]
+
+    def __repr__(self):
+        quality = "HQ" if self.quality else "NQ"
+        return f"{self.material.item.name} ({quality}) {self.route}"
 
     @property
     def overall_price(self) -> int:
@@ -116,7 +120,6 @@ class MarketEntry: #
         return MarketRoute(int(min_cost[best_amount]), best_amount, result)
 
 
-
 @dataclass
 class Market:
     parent: OrdealList
@@ -130,17 +133,14 @@ class Market:
         market_entries = []
         joined_list = list(self.parent.mats.low_mats.items.values()) + list(self.parent.mats.mid_mats.items.values())
         for mat in joined_list:
-            print(f"listing {mat.item.name}, ordeal is {mat.ordeal}, flags are {mat.flags}, amount is {mat.amount}")
             if mat.ordeal == Ordeal.market and mat.amount > 0:
 
-                print(f"{mat.item.name} added to market ordeal list")
                 market_entry = (MarketEntry(mat))
                 market_entries.append(market_entry)
         return market_entries
 
     def __repr__(self):
         return f"Market({self.entries})"
-
 
     @property
     def overall_price(self) -> int:
@@ -152,6 +152,20 @@ class Market:
     @overall_price.setter
     def overall_price(self, value):
         pass
+
+    @property
+    def route(self):
+        dictionary = {}
+        for market_entry in self.entries:
+            for listing in market_entry.route.listings:
+                if listing.world.name not in dictionary:
+                    dictionary[listing.world.name] = {}
+                if market_entry.material.item.name not in dictionary[listing.world.name]:
+                    dictionary[listing.world.name][market_entry.material.item.name] = []
+                dictionary[listing.world.name][market_entry.material.item.name].append(listing)
+
+        return dictionary
+
 
 
 
@@ -185,7 +199,6 @@ class VendorEntry:
                     chosen_listing = (name, listing)
             self.material.item.vendorable.chosen_listing = chosen_listing
         return self.material.item.vendorable.chosen_listing
-
 
 
 @dataclass
@@ -223,7 +236,6 @@ class Vendor:
         return dictionary
 
 
-
 @dataclass
 class Gather:
     parent: OrdealList
@@ -240,6 +252,7 @@ class Gather:
             if mat.ordeal == Ordeal.gather and mat.amount > 0:
                 mats.append(mat)
         return mats
+
 
 @dataclass
 class Hunt:
@@ -266,9 +279,6 @@ class Hunt:
             targets = (mat.amount, mat.item.huntable.drops_from)
             targets_dict[mat.item.name] = targets
         return targets_dict
-
-
-
 
 
 @dataclass
@@ -369,7 +379,7 @@ class OrdealList:
                 low_mats.add(low_mats.items[ingredient.name], total_amount)
 
 
-    def remove_flag_craft(self, mat_name: str):
+    def remove_ordeal_craft(self, mat_name: str):
         mat_list = self.mats.mid_mats.items
         if not mat_name in mat_list:
             return False
@@ -381,18 +391,20 @@ class OrdealList:
             return True
         return False
 
-    def add_flag_craft(self, mat_name: str):
+    def set_ordeal_craft(self, mat_name: str):
         mat_list = self.mats.mid_mats.items
         if not mat_name in mat_list:
             return False
         #No craft flag check because if it is in mid-mats, mat.flags.is_craftable should be true already
-        if not mat_list[mat_name].ordeal == Ordeal.craft: #is craft ordeal not set on mat, and is mat not in a craft list?
+        if not mat_list[mat_name].ordeal == Ordeal.craft: #is craft ordeal not set on mat?
             mat = mat_list[mat_name]
             mat.ordeal = None
 
             self.recursively_add_materials(mat)
-
+            return True
         return False
 
-    #todo: continue here
+
+
+#todo: continue here
 

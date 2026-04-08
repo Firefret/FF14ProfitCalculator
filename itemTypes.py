@@ -59,11 +59,17 @@ class MarketListing:
         self.price = price
         self.price_per_unit = round(self.price / self.quantity)
 
+    def __repr__(self):
+        return f"{self.quantity} from {self.retainer_name} on {self.world.name} for {self.price}\n"
+
 @dataclass
 class MarketRoute:
     total_cost: int
     total_amount: int
     listings: list[MarketListing]
+
+    def __repr__(self):
+        return f"{self.total_amount} for {self.total_cost}: {self.listings}"
 
 @dataclass
 class ListingData:
