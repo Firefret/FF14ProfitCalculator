@@ -49,7 +49,7 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
     if item.craftable:
         if depth > 0: #Don't need topmost items, those are the ones you gonna craft
             # Create and add the current item to mid_mats
-            mat = Material(item, amount)
+            mat = Material(item, amount, parent = mat_list_div.mid_mats)
             #mat.set_default_ordeal(flag_priority)
             mat_list_div.mid_mats.add(mat)
 
@@ -66,12 +66,14 @@ def recursive_mat_sweep_and_add(item: Item, amount: int, mat_list_div: MaterialL
             recursive_mat_sweep_and_add(ingredient, total_ing_needed, mat_list_div, flag_priority, depth+1)
 
     else:
-        mat = Material(item, amount)
+        mat = Material(item, amount, parent = mat_list_div.low_mats)
         #mat.set_default_ordeal(flag_priority)
         mat_list_div.low_mats.add(mat)
 
 def form_divided_material_list(wishlist: Wishlist) -> MaterialListDivided:
     mat_list_div = MaterialListDivided(MaterialList({}), MaterialList({}))
+    mat_list_div.low_mats.parent = mat_list_div
+    mat_list_div.mid_mats.parent = mat_list_div
     for entry in wishlist.items.values():
         recursive_mat_sweep_and_add(entry.item, entry.amount, mat_list_div, FLAG_PRIORITY)
     return mat_list_div

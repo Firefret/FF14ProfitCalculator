@@ -1,5 +1,5 @@
+from __future__ import annotations
 import dataclasses
-
 from itemTypes import *
 from enum import Enum
 import re
@@ -23,10 +23,18 @@ class Material:
     flags: SourceFlags
     ordeal: Ordeal | None = None
     quality: bool  | None = None
+    parent: MaterialList | None = None
+    is_enough_hq: bool | None = None
 
-    def __init__(self, item: Item, amount:int):
+    def __init__(self, item: Item, amount:int, parent = None):
         self.item = item
         self.amount = amount
+        self.parent = parent
+
+    def __eq__(self, other):
+        if self.item.name == other.item.name and self.amount == other.amount:
+            return True
+        return False
 
     def is_crystal(self):
         if re.search(r"^(Fire|Ice|Lightning|Water|Earth|Wind)\s(Shard|Crystal|Cluster)$", self.item.name):
@@ -39,12 +47,15 @@ class Material:
         for ordeal in reversed(priority):
             attr_name = ordeal.value
             if attr_name == "market" and hasattr(self.flags, attr_name):
-                print(self)
+                #print(self.item.name)
                 if self.available_amount_handler(priority):
                     self.ordeal = Ordeal.market
                 #break #because available_amount_handler() has its own set_default_ordeal call with market excluded from ordeal priority
             if getattr(self.flags, attr_name):
                 self.ordeal = ordeal
+
+        #if self.ordeal != Ordeal.craft:
+            #self.
 
     def set_ordeal(self, ordeal: Ordeal) -> bool:
         if not hasattr(self.flags, ordeal.value):
@@ -148,7 +159,7 @@ class Material:
 @dataclass
 class MaterialList: #let it know about the game server somehow
     items: dict[str, Material]
-
+    parent : MaterialListDivided | None = None
 
     def add(self, mat: Material, amount = None):
         if mat in self.items.values():

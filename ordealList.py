@@ -298,7 +298,8 @@ class OrdealList:
             priority = FLAG_PRIORITY
 
         for mat in (self.mats.mid_mats.items|self.mats.low_mats.items).values():
-            mat.set_default_ordeal(priority)
+            if mat.ordeal is None or not hasattr(mat, "ordeal"):
+                mat.set_default_ordeal(priority)
 
         self.market = Market(self)
         self.vendor = Vendor(self)
@@ -347,36 +348,6 @@ class OrdealList:
 
         sections.append("\n" + divider)
         return "\n".join(sections)
-
-    def recursively_remove_materials(self, mat: Material, amount=None):
-        if amount is None:
-            amount = mat.amount
-
-        mid_mats = self.mats.mid_mats
-        low_mats = self.mats.low_mats
-        for ingredient, ing_amount in zip(mat.item.craftable.ingredients[0], mat.item.craftable.ingredients[1]):
-            total_amount = amount * ing_amount
-            if ingredient.craftable:
-
-                self.recursively_remove_materials(mid_mats.items[ingredient.name], total_amount)
-                mid_mats.remove(ingredient.name, total_amount)
-            else:
-                low_mats.remove(ingredient.name, total_amount)
-
-    def recursively_add_materials(self, mat: Material, amount=None):
-        if amount is None:
-            amount = mat.amount
-
-        mid_mats = self.mats.mid_mats
-        low_mats = self.mats.low_mats
-        for ingredient, ing_amount in zip(mat.item.craftable.ingredients[0], mat.item.craftable.ingredients[1]):
-            total_amount = amount * ing_amount
-            if ingredient.craftable:
-
-                self.recursively_add_materials(mid_mats.items[ingredient.name], total_amount)
-                mid_mats.add(mid_mats.items[ingredient.name], total_amount)
-            else:
-                low_mats.add(low_mats.items[ingredient.name], total_amount)
 
 
     def remove_ordeal_craft(self, mat_name: str):
