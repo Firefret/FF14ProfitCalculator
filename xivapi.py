@@ -3,11 +3,33 @@ from gameServer import *
 import aiohttp
 import asyncio
 from typing import TypeVar
-
+from garlandTools import *
+from itemCache import get_cached_item
 from universalis import fetch_item_sale_data
 
 T = TypeVar("T")
 
+async def fetch_top_item_data(item_name: str, server: World) -> Item | Craftable | Marketable:
+    from garlandTools import fetch_garland_data, apply_garland_data
+    async with aiohttp.ClientSession() as session:
+        item = await fetch_item_base(item_name, session)
+
+        # Craftability
+        crafting_data = await fetch_crafting_data(item, session)
+        if crafting_data:
+            ingredients = await asyncio.gather(
+                *(fetch_full_item_data(ing.name, server, session) for ing in crafting_data.ingredients[0])
+            )
+            crafting_data.ingredients = (list(ingredients), crafting_data.ingredients[1])
+            item.craftable = crafting_data
+
+        # Gatherability, Vendorability, Huntability, Icon
+        garland_data = await fetch_garland_data(item, server, session)
+        apply_garland_data(item, garland_data)
+        # Marketability
+        item.marketable = await fetch_item_sale_data(item, server, session)
+        cache_item(item, garland_data)
+        return item
 
 async def fetch_item_base(item_name, session: aiohttp.ClientSession) -> Item:
     request_url = f"https://v2.xivapi.com/api/search?sheets=Item&query=Name%3D%22{item_name}%22"

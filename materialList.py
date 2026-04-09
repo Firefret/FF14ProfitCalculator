@@ -7,6 +7,7 @@ from enum import Enum
 import re
 
 from itemTypes import SourceFlags
+from xivapi import fetch_top_item_data
 
 
 class Ordeal(Enum):
@@ -58,20 +59,15 @@ class Material:
 
         # Removal is now handled by recalculate_amounts — no action needed here
 
-    def set_ordeal(self, ordeal: Ordeal) -> bool:
-        if not hasattr(self.flags, ordeal.value):
-            return False
-
-        if ordeal.value == "market" and not self.is_enough_hq and not self.is_enough_nq:
-            return False
-
+    def change_ordeal(self, ordeal: Ordeal): #only do based on get_possible_ordeals() output
+        mat_list = self.parent.parent
         self.ordeal = ordeal
-        return True
+        mat_list.recalculate_amounts()
 
     def get_possible_ordeals(self) -> list[Ordeal]:
         ordeals = []
         for flag, value in dataclasses.asdict(self.flags).items():
-            if flag == "market" and value and self.available_amount_handler():
+            if flag == "market" and value and (self.is_enough_hq or self.is_enough_nq):
                 ordeals.append(Ordeal.market)
                 continue
             if value:
@@ -243,23 +239,22 @@ class MaterialListDivided:
     mid_mats: MaterialList
     low_mats: MaterialList
     top_items: list[tuple] = None  # list of (Item, amount) for top-level recipes
+    player_server: World | None = None
 
     def __repr__(self):
         return f"\n--MID MATS--\n{self.mid_mats.__str__()}\n--LOW MATS--\n{self.low_mats.__str__()}"
 
     def recalculate_amounts(self):
-        """Zero out all amounts, then re-expand from top-level items,
-        stopping at mid_mats whose ordeal is not 'craft'."""
         if not self.top_items:
             return
 
-        # Zero out everything
+        # zero out everything
         for mat in self.mid_mats.items.values():
             mat.amount = 0
         for mat in self.low_mats.items.values():
             mat.amount = 0
 
-        # Re-expand each top-level item
+        # re-expand each top-level item
         for item, amount in self.top_items:
             self._expand_item(item, amount, depth=0)
 
@@ -271,7 +266,7 @@ class MaterialListDivided:
                 if item.name in self.mid_mats.items:
                     self.mid_mats.items[item.name].amount += amount
 
-                    # If this mid_mat is NOT being crafted, stop here —
+                    # If this mid_mat is NOT being crafted, stop here
                     # the player will obtain it by other means
                     if self.mid_mats.items[item.name].ordeal != Ordeal.craft \
                             and self.mid_mats.items[item.name].ordeal is not None:
@@ -290,12 +285,70 @@ class MaterialListDivided:
             if item.name in self.low_mats.items:
                 self.low_mats.items[item.name].amount += amount
 
-    def recursively_remove_materials(self, mat: Material, amount=None):
-        """Recalculate everything instead of trying to incrementally remove."""
+    def update_top_item(self, item: Item, new_amount: int):
+        if self.top_items is None:
+            self.top_items = []
+
+        # update existing or append new
+        for i, (existing_item, _) in enumerate(self.top_items):
+            if existing_item.name == item.name:
+                if new_amount <= 0:
+                    self.top_items.pop(i)
+                else:
+                    self.top_items[i] = (item, new_amount)
+                self.recalculate_amounts()
+                return
+
+        # new item, need to register its sub-materials first
+        if new_amount > 0:
+            self.top_items.append((item, new_amount))
+            self.recalculate_amounts()
+
+    def remove_top_item(self, item_to_remove: Item):
+        if self.top_items is None:
+            return
+        self.top_items = [(item, amt) for item, amt in self.top_items if item.name != item_to_remove.name]
         self.recalculate_amounts()
 
-    def recursively_add_materials(self, mat: Material, amount=None):
-        """Recalculate everything instead of trying to incrementally add."""
+    def recursive_mat_sweep_and_add(self, item: Item, amount: int, flag_priority=None, depth=0):
+        if flag_priority is None:
+            from config import FLAG_PRIORITY
+            flag_priority = FLAG_PRIORITY
+
+        # Create material with 0 amount (recalculate_amounts will fill it)
+        if item.craftable:
+            if depth > 0:
+                if item.name not in self.mid_mats.items:
+                    mat = Material(item, 0, parent=self.mid_mats)
+                    mat.set_default_ordeal(flag_priority)  # Set ordeal ONCE here
+                    self.mid_mats.items[item.name] = mat
+
+            # Keep recursing to find all sub-ingredients
+            for ingredient in item.craftable.ingredients[0]:
+                self.recursive_mat_sweep_and_add(ingredient, 0, flag_priority, depth + 1)
+        else:
+            if item.name not in self.low_mats.items:
+                mat = Material(item, 0, parent=self.low_mats)
+                mat.set_default_ordeal(flag_priority)
+                self.low_mats.items[item.name] = mat
+
+    async def add_item_to_material_list(self, item_name: str, amount: int):
+        item = await fetch_top_item_data(item_name, self.player_server)
+
+        # 1. Discover all unique items in the tree and add them with 0 qty
+        self.recursive_mat_sweep_and_add(item, amount)
+
+        # 2. Register the top-level goal
+        if self.top_items is None: self.top_items = []
+
+        found = False
+        for i, (existing, _) in enumerate(self.top_items):
+            if existing.name == item.name:
+                self.top_items[i] = (item, amount)
+                found = True
+                break
+        if not found:
+            self.top_items.append((item, amount))
+
+        # 3. The "One Source of Truth" for math
         self.recalculate_amounts()
-
-

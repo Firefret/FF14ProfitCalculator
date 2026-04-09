@@ -297,12 +297,10 @@ class OrdealList:
             from config import FLAG_PRIORITY
             priority = FLAG_PRIORITY
 
-        # Phase 1: Assign ordeals to all materials (no side effects)
         for mat in (self.mats.mid_mats.items | self.mats.low_mats.items).values():
             if mat.ordeal is None or not hasattr(mat, "ordeal"):
                 mat.set_default_ordeal(priority)
 
-        # Phase 2: Recalculate amounts based on ordeal decisions
         self.mats.recalculate_amounts()
 
         self.market = Market(self)
@@ -312,9 +310,13 @@ class OrdealList:
         self.craft = Craft(self)
 
     def __repr__(self):
+        self.mats.recalculate_amounts()
         divider = "=" * 60
         sub_div = "-" * 60
         sections = [divider, f"{'ORDEAL LIST SUMMARY':^60}", divider]
+        sections.append(f"\nTO CRAFT (mat list length is {len(self.mats.mid_mats.items|self.mats.low_mats.items)}):")
+        for item, amount in self.mats.top_items:
+            sections.append(f"{item.name} : {amount:>8,}")
 
         # MARKET SECTION
         if self.market:
@@ -360,30 +362,6 @@ class OrdealList:
         return "\n".join(sections)
 
 
-    def remove_ordeal_craft(self, mat_name: str):
-        mat_list = self.mats.mid_mats.items
-        if not mat_name in mat_list:
-            return False
-        if mat_list[mat_name].ordeal == Ordeal.craft: #is craft ordeal set on mat?
-            mat = mat_list[mat_name]
-            mat.ordeal = None
-
-            self.mats.recursively_remove_materials(mat)
-            return True
-        return False
-
-    def set_ordeal_craft(self, mat_name: str):
-        mat_list = self.mats.mid_mats.items
-        if not mat_name in mat_list:
-            return False
-        #No craft flag check because if it is in mid-mats, mat.flags.is_craftable should be true already
-        if not mat_list[mat_name].ordeal == Ordeal.craft: #is craft ordeal not set on mat?
-            mat = mat_list[mat_name]
-            mat.ordeal = None
-
-            self.mats.recursively_add_materials(mat)
-            return True
-        return False
 
 
 

@@ -8,6 +8,7 @@ class WishlistEntry:
 @dataclass
 class Wishlist:
     items: dict
+    server: World
 
     def add(self, entry: WishlistEntry):
         if entry.item.name not in self.items:
