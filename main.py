@@ -74,7 +74,11 @@ def form_divided_material_list(wishlist: Wishlist) -> MaterialListDivided:
     mat_list_div = MaterialListDivided(MaterialList({}), MaterialList({}))
     mat_list_div.low_mats.parent = mat_list_div
     mat_list_div.mid_mats.parent = mat_list_div
+
+    # Store top-level items for recalculation
+    mat_list_div.top_items = []
     for entry in wishlist.items.values():
+        mat_list_div.top_items.append((entry.item, entry.amount))
         recursive_mat_sweep_and_add(entry.item, entry.amount, mat_list_div, FLAG_PRIORITY)
     return mat_list_div
 

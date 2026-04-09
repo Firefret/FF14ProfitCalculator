@@ -291,15 +291,19 @@ class OrdealList:
     gather: Gather | None = None
     hunt: Hunt | None = None
 
-    def __init__(self, mats: MaterialListDivided, priority = None):
+    def __init__(self, mats: MaterialListDivided, priority=None):
         self.mats = mats
         if priority is None:
             from config import FLAG_PRIORITY
             priority = FLAG_PRIORITY
 
-        for mat in (self.mats.mid_mats.items|self.mats.low_mats.items).values():
+        # Phase 1: Assign ordeals to all materials (no side effects)
+        for mat in (self.mats.mid_mats.items | self.mats.low_mats.items).values():
             if mat.ordeal is None or not hasattr(mat, "ordeal"):
                 mat.set_default_ordeal(priority)
+
+        # Phase 2: Recalculate amounts based on ordeal decisions
+        self.mats.recalculate_amounts()
 
         self.market = Market(self)
         self.vendor = Vendor(self)
@@ -346,6 +350,12 @@ class OrdealList:
             for mat_name, targets in self.hunt.targets.items():
                 sections.append(f"  x{targets[0]:<4} {mat_name}: {targets[1]}")
 
+        # CRYSTALS
+        sections.append(f"\n[ CRYSTALS ]")
+        for name, mat in (self.mats.mid_mats.items|self.mats.low_mats.items).items():
+            if mat.is_crystal():
+                sections.append(f"  x{mat.amount:<4} {name}")
+
         sections.append("\n" + divider)
         return "\n".join(sections)
 
@@ -358,7 +368,7 @@ class OrdealList:
             mat = mat_list[mat_name]
             mat.ordeal = None
 
-            self.recursively_remove_materials(mat)
+            self.mats.recursively_remove_materials(mat)
             return True
         return False
 
@@ -371,7 +381,7 @@ class OrdealList:
             mat = mat_list[mat_name]
             mat.ordeal = None
 
-            self.recursively_add_materials(mat)
+            self.mats.recursively_add_materials(mat)
             return True
         return False
 

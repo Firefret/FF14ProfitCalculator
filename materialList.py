@@ -1,5 +1,7 @@
 from __future__ import annotations
 import dataclasses
+import math
+
 from itemTypes import *
 from enum import Enum
 import re
@@ -54,8 +56,7 @@ class Material:
             if getattr(self.flags, attr_name):
                 self.ordeal = ordeal
 
-        #if self.ordeal != Ordeal.craft:
-            #self.
+        # Removal is now handled by recalculate_amounts — no action needed here
 
     def set_ordeal(self, ordeal: Ordeal) -> bool:
         if not hasattr(self.flags, ordeal.value):
@@ -241,9 +242,60 @@ class MaterialList: #let it know about the game server somehow
 class MaterialListDivided:
     mid_mats: MaterialList
     low_mats: MaterialList
-
+    top_items: list[tuple] = None  # list of (Item, amount) for top-level recipes
 
     def __repr__(self):
         return f"\n--MID MATS--\n{self.mid_mats.__str__()}\n--LOW MATS--\n{self.low_mats.__str__()}"
+
+    def recalculate_amounts(self):
+        """Zero out all amounts, then re-expand from top-level items,
+        stopping at mid_mats whose ordeal is not 'craft'."""
+        if not self.top_items:
+            return
+
+        # Zero out everything
+        for mat in self.mid_mats.items.values():
+            mat.amount = 0
+        for mat in self.low_mats.items.values():
+            mat.amount = 0
+
+        # Re-expand each top-level item
+        for item, amount in self.top_items:
+            self._expand_item(item, amount, depth=0)
+
+    def _expand_item(self, item: Item, amount: int, depth: int):
+        """Recursively expand a recipe tree, respecting ordeal decisions."""
+        if item.craftable:
+            if depth > 0:
+                # Add to mid_mats
+                if item.name in self.mid_mats.items:
+                    self.mid_mats.items[item.name].amount += amount
+
+                    # If this mid_mat is NOT being crafted, stop here —
+                    # the player will obtain it by other means
+                    if self.mid_mats.items[item.name].ordeal != Ordeal.craft \
+                            and self.mid_mats.items[item.name].ordeal is not None:
+                        return
+
+            # Calculate crafts needed
+            craft_yield = item.craftable.item_yield
+            amount_of_crafts = math.ceil(amount / craft_yield)
+
+            # Expand ingredients
+            for ingredient, ing_per_craft in zip(item.craftable.ingredients[0], item.craftable.ingredients[1]):
+                total_ing_needed = amount_of_crafts * ing_per_craft
+                self._expand_item(ingredient, total_ing_needed, depth + 1)
+        else:
+            # Leaf node — add to low_mats
+            if item.name in self.low_mats.items:
+                self.low_mats.items[item.name].amount += amount
+
+    def recursively_remove_materials(self, mat: Material, amount=None):
+        """Recalculate everything instead of trying to incrementally remove."""
+        self.recalculate_amounts()
+
+    def recursively_add_materials(self, mat: Material, amount=None):
+        """Recalculate everything instead of trying to incrementally add."""
+        self.recalculate_amounts()
 
 
