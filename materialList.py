@@ -43,6 +43,8 @@ class Material:
         return False
 
     def set_default_ordeal(self, priority: list[Ordeal]):
+        if self.ordeal is not None:
+            return
         if self.is_crystal():
             return
         for ordeal in reversed(priority):
@@ -368,18 +370,18 @@ class Endeavor:
             if depth > 0:
                 if item.name not in self.mid_mats.items:
                     mat = Material(item, 0, parent=self.mid_mats)
+                    # We DO NOT set ordeal here yet because we don't have market listings
                     self.mid_mats.items[item.name] = mat
-                    newly_added_names.add(item.name)  # Mark as new
+                    newly_added_names.add(item.name)
 
             for ingredient in item.craftable.ingredients[0]:
-                # Collect names from deeper levels
                 child_new_names = self.recursive_mat_sweep_and_add(ingredient, 0, flag_priority, depth + 1)
                 newly_added_names.update(child_new_names)
         else:
             if item.name not in self.low_mats.items:
                 mat = Material(item, 0, parent=self.low_mats)
                 self.low_mats.items[item.name] = mat
-                newly_added_names.add(item.name)  # Mark as new
+                newly_added_names.add(item.name)
 
         return newly_added_names
 
@@ -387,31 +389,34 @@ class Endeavor:
                                          dc: DataCenter):
         from config import FLAG_PRIORITY
 
-        # 1. Fetch top-level items
+        # 1. Fetch top-level items and process requests
         requests = [ItemRequest(self.player_server, name, amt) for name, amt in additions]
         tasks = [self.wishlist.process_request(req) for req in requests]
         await asyncio.gather(*tasks)
 
-        # 2. Sweep and identify ONLY new materials
+        # 2. Sweep: Identify only brand-new material names
         all_new_names = set()
         addition_names = {name for name, _ in additions}
         new_top_entries = [entry for name, entry in self.wishlist.entries.items() if name in addition_names]
 
         for entry in new_top_entries:
+            # This only builds the dictionary keys for things we haven't seen
             newly_discovered = self.recursive_mat_sweep_and_add(entry.item, 0, FLAG_PRIORITY)
             all_new_names.update(newly_discovered)
 
-        # 3. Fetch listings for EVERYTHING (Prices change, so we refresh all)
-        # However, we only NEED to apply default ordeals to the 'all_new_names'
+        # 3. Fetch Listings: Refresh prices for the whole list
+        # We refresh everything so your 'is_enough_nq/hq' checks are accurate
         await self.mid_mats.fetch_and_apply_market_listings(dc, session)
         await self.low_mats.fetch_and_apply_market_listings(dc, session)
 
-        # 4. Set Default Ordeals ONLY for items in 'all_new_names'
+        # 4. Set Default Ordeals: ONLY for the items marked as new
         for name in all_new_names:
-            # Check both lists to find the material object
             mat = self.mid_mats.items.get(name) or self.low_mats.items.get(name)
-            if mat and mat.ordeal is None:
+            if mat:
+                # Material.set_default_ordeal now has the 'if self.ordeal is not None' guard
                 mat.set_default_ordeal(FLAG_PRIORITY)
 
-        # 5. Math Pass
+        # 5. Recalculate: Distribute amounts based on the recipe tree
+        # Since ordeals are now "locked" (old ones kept, new ones set),
+        # this will correctly stop at market-bought mid-mats.
         self.recalculate_amounts()

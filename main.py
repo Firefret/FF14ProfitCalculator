@@ -50,6 +50,8 @@ async def test_entry_point():
         print(ordeal_list.market.route)
         await ordeal_list.mats.add_items_to_material_list([("Courtly Lover's Labrys", 2)], session, world.dc)
         print(ordeal_list)
+        ordeal_list.mats.update_top_item(ordeal_list.mats.wishlist.entries["Courtly Lover's Sword"].item, 2)
+        print(ordeal_list)
 
         #print(await get_item_listings(div_mat_list.mid_mats.items["Grade 4 Gemsap of Vitality"].item.craftable.ingredients[0], world.dc, session))
 
