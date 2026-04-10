@@ -283,7 +283,7 @@ class Hunt:
 
 @dataclass
 class OrdealList:
-    mats: MaterialListDivided
+    mats: Endeavor
 
     craft: Craft | None = None
     market: Market | None = None
@@ -291,7 +291,7 @@ class OrdealList:
     gather: Gather | None = None
     hunt: Hunt | None = None
 
-    def __init__(self, mats: MaterialListDivided, priority=None):
+    def __init__(self, mats: Endeavor, priority=None):
         self.mats = mats
         if priority is None:
             from config import FLAG_PRIORITY
@@ -313,10 +313,10 @@ class OrdealList:
         self.mats.recalculate_amounts()
         divider = "=" * 60
         sub_div = "-" * 60
-        sections = [divider, f"{'ORDEAL LIST SUMMARY':^60}", divider]
-        sections.append(f"\nTO CRAFT (mat list length is {len(self.mats.mid_mats.items|self.mats.low_mats.items)}):")
-        for item, amount in self.mats.top_items:
-            sections.append(f"{item.name} : {amount:>8,}")
+        sections = [divider, f"{'ORDEAL LIST SUMMARY':^60}", divider,
+                    f"\nTO CRAFT (mat list length is {len(self.mats.mid_mats.items | self.mats.low_mats.items)}):"]
+        for name, entry in self.mats.wishlist.entries.items():
+            sections.append(f"{name} : {entry.amount:>8,}")
 
         # MARKET SECTION
         if self.market:

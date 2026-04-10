@@ -1,12 +1,11 @@
 from __future__ import annotations
 import dataclasses
 import math
-
-from itemTypes import *
-from enum import Enum
 import re
 
-from itemTypes import SourceFlags
+from itemCache import get_cached_garland_data
+from universalis import get_item_listings
+from wishlist import *
 from xivapi import fetch_top_item_data
 
 
@@ -20,16 +19,15 @@ class Ordeal(Enum):
 
 @dataclass
 class Material:
-
     item: Item
     amount: int
     flags: SourceFlags
     ordeal: Ordeal | None = None
-    quality: bool  | None = None
+    quality: bool | None = None
     parent: MaterialList | None = None
     is_enough_hq: bool | None = None
 
-    def __init__(self, item: Item, amount:int, parent = None):
+    def __init__(self, item: Item, amount: int, parent=None):
         self.item = item
         self.amount = amount
         self.parent = parent
@@ -50,16 +48,16 @@ class Material:
         for ordeal in reversed(priority):
             attr_name = ordeal.value
             if attr_name == "market" and hasattr(self.flags, attr_name):
-                #print(self.item.name)
+                # print(self.item.name)
                 if self.available_amount_handler(priority):
                     self.ordeal = Ordeal.market
-                #break #because available_amount_handler() has its own set_default_ordeal call with market excluded from ordeal priority
+                # break #because available_amount_handler() has its own set_default_ordeal call with market excluded from ordeal priority
             if getattr(self.flags, attr_name):
                 self.ordeal = ordeal
 
         # Removal is now handled by recalculate_amounts — no action needed here
 
-    def change_ordeal(self, ordeal: Ordeal): #only do based on get_possible_ordeals() output
+    def change_ordeal(self, ordeal: Ordeal):  # only do based on get_possible_ordeals() output
         mat_list = self.parent.parent
         self.ordeal = ordeal
         mat_list.recalculate_amounts()
@@ -73,7 +71,6 @@ class Material:
             if value:
                 ordeals.append(Ordeal(flag))
         return ordeals
-
 
     @property
     def is_enough_nq(self) -> bool:
@@ -99,25 +96,26 @@ class Material:
                 break
         return is_hq_enough
 
-    def available_amount_handler(self, priority = None): #checks if there's enough nq or hq mats, if not,
+    def available_amount_handler(self, priority=None):  # checks if there's enough nq or hq mats, if not,
         if not self.is_enough_nq and not self.is_enough_hq:
             if priority is None:
                 from config import FLAG_PRIORITY
                 priority = FLAG_PRIORITY
-            priority.remove(Ordeal.market)
-            self.ordeal = None
-            self.set_default_ordeal(priority)
+            temp_priority = priority.copy()
+            temp_priority.remove(Ordeal.market)
+            self.set_default_ordeal(temp_priority)
             if self.ordeal is None:
-                raise ValueError(f"Not enough {self.item.name} on market ({self.amount}) and no other item sources found! ({self.flags})")
+                raise ValueError(
+                    f"Not enough {self.item.name} on market ({self.amount}) and no other item sources found! ({self.flags})")
             return False
         return True
 
-    def set_quality(self, quality = None) -> bool:
+    def set_quality(self, quality=None) -> bool:
         from config import DEFAULT_QUALITY
-        if quality is None: #this sets default or the other one available
+        if quality is None:  # this sets default or the other one available
             quality = DEFAULT_QUALITY
 
-            if quality: #True if default is HQ
+            if quality:  # True if default is HQ
                 if self.is_enough_hq:
                     self.quality = True
                     return True
@@ -132,7 +130,7 @@ class Material:
                     self.quality = True
                     return True
             return False
-        else: #this sets what was provided if possible, returns False if not
+        else:  # this sets what was provided if possible, returns False if not
             if quality and self.is_enough_hq:
                 self.quality = True
                 return True
@@ -154,11 +152,32 @@ class Material:
 
 
 @dataclass
-class MaterialList: #let it know about the game server somehow
+class MaterialList:
     items: dict[str, Material]
-    parent : MaterialListDivided | None = None
+    parent: Endeavor | None = None
 
-    def add(self, mat: Material, amount = None):
+    def __init__(self, items: dict[str, Material]):
+        self.items = items
+
+    async def fetch_and_apply_market_listings(self, dc: DataCenter, session: aiohttp.ClientSession):
+        # get a list of all tradeable mats
+        item_list = []
+        for name, mat in self.items.items():
+            garland_data = get_cached_garland_data(name)
+            if garland_data is None:
+                print(f"No garland_data for {name}")
+                continue
+            if garland_data["is_tradeable"]:
+                item_list.append(mat.item)
+            else:
+                print(f"{name} does not seem to be tradeable, garlandData view: {garland_data}")
+        listings = await get_item_listings(item_list, dc, session)
+        for index, item in enumerate(item_list):
+            mat = self.items[item.name]
+            market_data = MarketData(dc=dc, listings=listings[index])
+            mat.item.marketable = market_data
+
+    def add(self, mat: Material, amount=None):
         if mat in self.items.values():
             if amount is None:
                 self.items[mat.item.name].amount += mat.amount
@@ -234,121 +253,165 @@ class MaterialList: #let it know about the game server somehow
 
         return "\n".join(lines)
 
+
 @dataclass
-class MaterialListDivided:
-    mid_mats: MaterialList
-    low_mats: MaterialList
-    top_items: list[tuple] = None  # list of (Item, amount) for top-level recipes
-    player_server: World | None = None
+class Endeavor:
+    def __init__(self, wishlist: Wishlist):
+        from config import FLAG_PRIORITY
+        self.wishlist = wishlist
+        self.player_server = wishlist.server
+
+        # 1. INITIALIZE the attributes FIRST
+        self.mid_mats = MaterialList({})
+        self.low_mats = MaterialList({})
+
+        # 2. Set the parent references
+        self.mid_mats.parent = self
+        self.low_mats.parent = self
+
+        # 3. NOW run the sweep (which uses self.low_mats and self.mid_mats)
+        for entry in wishlist.entries.values():
+            self.recursive_mat_sweep_and_add(entry.item, entry.amount, FLAG_PRIORITY)
+
+        # 4. Run the first math pass
+        self.recalculate_amounts()
 
     def __repr__(self):
         return f"\n--MID MATS--\n{self.mid_mats.__str__()}\n--LOW MATS--\n{self.low_mats.__str__()}"
 
     def recalculate_amounts(self):
-        if not self.top_items:
+        if not self.wishlist:
             return
 
-        # zero out everything
+        # 1. Reset all existing material amounts to zero
         for mat in self.mid_mats.items.values():
             mat.amount = 0
         for mat in self.low_mats.items.values():
             mat.amount = 0
 
-        # re-expand each top-level item
-        for item, amount in self.top_items:
-            self._expand_item(item, amount, depth=0)
+        # 2. Iterate through the root goals in the wishlist
+        for entry in self.wishlist.entries.values():
+            # We start depth at 0 for the final products
+            self._expand_item(entry.item, entry.amount, depth=0)
 
     def _expand_item(self, item: Item, amount: int, depth: int):
         """Recursively expand a recipe tree, respecting ordeal decisions."""
-        if item.craftable:
-            if depth > 0:
-                # Add to mid_mats
-                if item.name in self.mid_mats.items:
-                    self.mid_mats.items[item.name].amount += amount
 
-                    # If this mid_mat is NOT being crafted, stop here
-                    # the player will obtain it by other means
-                    if self.mid_mats.items[item.name].ordeal != Ordeal.craft \
-                            and self.mid_mats.items[item.name].ordeal is not None:
-                        return
+        # If we are at depth > 0, we are looking at a component/ingredient
+        if depth > 0:
+            # Check mid_mats first (craftable components)
+            if item.name in self.mid_mats.items:
+                mat = self.mid_mats.items[item.name]
+                mat.amount += amount
 
-            # Calculate crafts needed
-            craft_yield = item.craftable.item_yield
-            amount_of_crafts = math.ceil(amount / craft_yield)
+                # DECISION GATE:
+                # If we chose NOT to craft this, stop recursion here.
+                # We also check for None in case it's a new item not yet initialized.
+                if mat.ordeal != Ordeal.craft and mat.ordeal is not None:
+                    return
 
-            # Expand ingredients
-            for ingredient, ing_per_craft in zip(item.craftable.ingredients[0], item.craftable.ingredients[1]):
-                total_ing_needed = amount_of_crafts * ing_per_craft
-                self._expand_item(ingredient, total_ing_needed, depth + 1)
-        else:
-            # Leaf node — add to low_mats
-            if item.name in self.low_mats.items:
+            # Check low_mats (raw materials that aren't craftable)
+            elif item.name in self.low_mats.items:
                 self.low_mats.items[item.name].amount += amount
+                return  # Raw mats have no ingredients, so stop recursion
+
+        # 3. Handle the Crafting Logic
+        # We reach this point if:
+        # a) It's a depth 0 item (we are making the final product)
+        # b) It's a mid_mat set to Ordeal.craft
+        if item.craftable:
+            craft_yield = item.craftable.item_yield
+            # How many times do we need to hit 'Synthesize'?
+            num_crafts = math.ceil(amount / craft_yield)
+
+            # Zip ingredients and their counts per-craft
+            for ingredient, qty_per in zip(item.craftable.ingredients[0],
+                                           item.craftable.ingredients[1]):
+                total_needed = num_crafts * qty_per
+                self._expand_item(ingredient, total_needed, depth + 1)
 
     def update_top_item(self, item: Item, new_amount: int):
-        if self.top_items is None:
-            self.top_items = []
-
-        # update existing or append new
-        for i, (existing_item, _) in enumerate(self.top_items):
-            if existing_item.name == item.name:
-                if new_amount <= 0:
-                    self.top_items.pop(i)
-                else:
-                    self.top_items[i] = (item, new_amount)
-                self.recalculate_amounts()
-                return
-
-        # new item, need to register its sub-materials first
-        if new_amount > 0:
-            self.top_items.append((item, new_amount))
+        existing_entry = next((entry for entry in self.wishlist.entries.values() if entry.item.name == item.name), None)
+        if existing_entry:
+            existing_entry.amount = new_amount
             self.recalculate_amounts()
+            return True
+        else:
+            return False
 
     def remove_top_item(self, item_to_remove: Item):
-        if self.top_items is None:
-            return
-        self.top_items = [(item, amt) for item, amt in self.top_items if item.name != item_to_remove.name]
-        self.recalculate_amounts()
+        if self.wishlist is None:
+            return False
+
+        # Wrap (key, entry) in parentheses to fix the SyntaxError
+        found = next(
+            ((key, entry) for key, entry in self.wishlist.entries.items()
+             if entry.item.name == item_to_remove.name),
+            None
+        )
+
+        if found:
+            key, _ = found  # Unpack the tuple
+            self.wishlist.entries.pop(key)
+            self.recalculate_amounts()
+            return True
+        return False
 
     def recursive_mat_sweep_and_add(self, item: Item, amount: int, flag_priority=None, depth=0):
+        newly_added_names = set()
+
         if flag_priority is None:
             from config import FLAG_PRIORITY
             flag_priority = FLAG_PRIORITY
 
-        # Create material with 0 amount (recalculate_amounts will fill it)
         if item.craftable:
             if depth > 0:
                 if item.name not in self.mid_mats.items:
                     mat = Material(item, 0, parent=self.mid_mats)
-                    mat.set_default_ordeal(flag_priority)  # Set ordeal ONCE here
                     self.mid_mats.items[item.name] = mat
+                    newly_added_names.add(item.name)  # Mark as new
 
-            # Keep recursing to find all sub-ingredients
             for ingredient in item.craftable.ingredients[0]:
-                self.recursive_mat_sweep_and_add(ingredient, 0, flag_priority, depth + 1)
+                # Collect names from deeper levels
+                child_new_names = self.recursive_mat_sweep_and_add(ingredient, 0, flag_priority, depth + 1)
+                newly_added_names.update(child_new_names)
         else:
             if item.name not in self.low_mats.items:
                 mat = Material(item, 0, parent=self.low_mats)
-                mat.set_default_ordeal(flag_priority)
                 self.low_mats.items[item.name] = mat
+                newly_added_names.add(item.name)  # Mark as new
 
-    async def add_item_to_material_list(self, item_name: str, amount: int):
-        item = await fetch_top_item_data(item_name, self.player_server)
+        return newly_added_names
 
-        # 1. Discover all unique items in the tree and add them with 0 qty
-        self.recursive_mat_sweep_and_add(item, amount)
+    async def add_items_to_material_list(self, additions: list[tuple[str, int]], session: aiohttp.ClientSession,
+                                         dc: DataCenter):
+        from config import FLAG_PRIORITY
 
-        # 2. Register the top-level goal
-        if self.top_items is None: self.top_items = []
+        # 1. Fetch top-level items
+        requests = [ItemRequest(self.player_server, name, amt) for name, amt in additions]
+        tasks = [self.wishlist.process_request(req) for req in requests]
+        await asyncio.gather(*tasks)
 
-        found = False
-        for i, (existing, _) in enumerate(self.top_items):
-            if existing.name == item.name:
-                self.top_items[i] = (item, amount)
-                found = True
-                break
-        if not found:
-            self.top_items.append((item, amount))
+        # 2. Sweep and identify ONLY new materials
+        all_new_names = set()
+        addition_names = {name for name, _ in additions}
+        new_top_entries = [entry for name, entry in self.wishlist.entries.items() if name in addition_names]
 
-        # 3. The "One Source of Truth" for math
+        for entry in new_top_entries:
+            newly_discovered = self.recursive_mat_sweep_and_add(entry.item, 0, FLAG_PRIORITY)
+            all_new_names.update(newly_discovered)
+
+        # 3. Fetch listings for EVERYTHING (Prices change, so we refresh all)
+        # However, we only NEED to apply default ordeals to the 'all_new_names'
+        await self.mid_mats.fetch_and_apply_market_listings(dc, session)
+        await self.low_mats.fetch_and_apply_market_listings(dc, session)
+
+        # 4. Set Default Ordeals ONLY for items in 'all_new_names'
+        for name in all_new_names:
+            # Check both lists to find the material object
+            mat = self.mid_mats.items.get(name) or self.low_mats.items.get(name)
+            if mat and mat.ordeal is None:
+                mat.set_default_ordeal(FLAG_PRIORITY)
+
+        # 5. Math Pass
         self.recalculate_amounts()
