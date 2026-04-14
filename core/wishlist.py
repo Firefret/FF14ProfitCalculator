@@ -1,8 +1,8 @@
 import math
 
-from itemRequest import ItemRequest
-from itemTypes import *
-from xivapi import fetch_top_item_data
+from .itemRequest import ItemRequest
+from .itemTypes import *
+from .xivapi import fetch_top_item_data
 
 
 @dataclass

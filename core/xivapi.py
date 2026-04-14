@@ -1,16 +1,13 @@
-from itemCache import *
-from gameServer import *
-import aiohttp
-import asyncio
 from typing import TypeVar
-from garlandTools import *
-from itemCache import get_cached_item
-from universalis import fetch_item_sale_data
+
+from .garlandTools import *
+from .itemCache import get_cached_item
+from .universalis import fetch_item_sale_data
 
 T = TypeVar("T")
 
 async def fetch_top_item_data(item_name: str, server: World) -> Item | Craftable | Marketable:
-    from garlandTools import fetch_garland_data, apply_garland_data
+    from .garlandTools import fetch_garland_data, apply_garland_data
     async with aiohttp.ClientSession() as session:
         item = await fetch_item_base(item_name, session)
 
@@ -113,7 +110,7 @@ async def fetch_crafting_data(item: Item, session: aiohttp.ClientSession) -> Cra
     return crafting_data
 
 async def populate_item_data(item_name: str, server: World, session: aiohttp.ClientSession) -> Item | Craftable:
-    from garlandTools import fetch_garland_data, apply_garland_data
+    from .garlandTools import fetch_garland_data, apply_garland_data
     item = await fetch_item_base(item_name, session)
     print(f"Retrieving {item.name}. id: {item.id}")
 

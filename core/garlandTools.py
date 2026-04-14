@@ -1,9 +1,8 @@
-import requests
 import json
-import asyncio
-import aiohttp
-from gameServer import *
-from itemCache import *
+
+import requests
+
+from .itemCache import *
 
 shakshouka = Item("Shakshouka", 24280, "https://www.garlandtools.org/files/icons/item/24280.png")
 dsmg = Item("'Darksteel Mitt Gauntlets", 3724, f"https://www.garlandtools.org/files/icons/item/3724.png")
@@ -100,7 +99,7 @@ async def resolve_hunting_data(garland_item: dict, session) -> HuntingData | boo
 
 
 async def resolve_vendor_listings(garland_item: dict, server, session) -> VendorData | bool:
-    from xivapi import fetch_full_item_data
+    from .xivapi import fetch_full_item_data
     listings = set()
 
     if "vendors" in garland_item["item"]:

@@ -1,4 +1,4 @@
-from gameServer import *
+from .gameServer import *
 
 class ItemRequest:
     def __init__(self, server: World, item_name: str, quantity: int):

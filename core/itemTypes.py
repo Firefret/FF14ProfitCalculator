@@ -1,9 +1,10 @@
 from __future__ import annotations
-from typing import Protocol
+
 from dataclasses import dataclass
 from enum import Enum
-from gameServer import *
+from typing import Protocol
 
+from .gameServer import *
 
 
 class Crafter(Enum):

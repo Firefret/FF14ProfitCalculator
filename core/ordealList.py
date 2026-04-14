@@ -1,7 +1,5 @@
 from __future__ import annotations
-import math
-from materialList import *
-from dataclasses import dataclass
+from .materialList import *
 
 
 class Craft:
@@ -283,6 +281,7 @@ class Hunt:
 
 @dataclass
 class OrdealList:
+    from .endeavor import Endeavor
     mats: Endeavor
 
     craft: Craft | None = None
@@ -294,7 +293,7 @@ class OrdealList:
     def __init__(self, mats: Endeavor, priority=None):
         self.mats = mats
         if priority is None:
-            from config import FLAG_PRIORITY
+            from .config import FLAG_PRIORITY
             priority = FLAG_PRIORITY
 
         for mat in (self.mats.mid_mats.items | self.mats.low_mats.items).values():

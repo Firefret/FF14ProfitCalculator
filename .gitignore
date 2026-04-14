@@ -11,3 +11,4 @@ __pycache__/
 .idea/dictionaries
 
 /tests/
+/redis_config.json

@@ -1,5 +1,7 @@
-from itemTypes import *
 import asyncio
+
+from .itemTypes import *
+
 
 @dataclass
 class CacheEntry:

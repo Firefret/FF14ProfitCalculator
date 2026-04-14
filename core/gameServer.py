@@ -1,6 +1,6 @@
 from __future__ import annotations
+
 import aiohttp
-import asyncio
 
 
 class DataCenter:
