@@ -62,7 +62,7 @@ app = FastAPI()
 async def read_root():
     return {"message": "Hello World"}
 
-@app.post("/newendeavor/", responses={400: {"description": "Invalid server name"},
+@app.post("/newendeavor", response_model=OrdealListResponse, responses={400: {"description": "Invalid server name"},
                                            401: {"description": "Invalid item name"},})
 async def new_endeavor(data: RequestBody):
     async with aiohttp.ClientSession() as session:
@@ -91,5 +91,5 @@ async def new_endeavor(data: RequestBody):
         ordeal_list = OrdealList(new_endeavor)
 
 
-        return ordeal_list
+        return OrdealListResponse.model_validate(ordeal_list)
 

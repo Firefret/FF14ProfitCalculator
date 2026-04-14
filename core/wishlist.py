@@ -7,10 +7,10 @@ from .xivapi import fetch_top_item_data
 
 @dataclass
 class WishlistEntry:
-    item: Craftable | Item
+    item: Item
     amount: int
 
-    def __init__(self, item: Craftable | Item, amount: int) -> None:
+    def __init__(self, item: Item, amount: int) -> None:
         self.item = item
         self.amount = amount
 

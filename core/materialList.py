@@ -26,7 +26,8 @@ class Material:
     ordeal: Ordeal | None = None
     quality: bool | None = None
     parent: MaterialList | None = None
-    is_enough_hq: bool | None = None
+    is_enough_hq: bool
+    is_enough_nq: bool
 
     def __init__(self, item: Item, amount: int, parent=None):
         self.item = item

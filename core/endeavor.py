@@ -8,6 +8,12 @@ from .materialList import MaterialList
 
 @dataclass
 class Endeavor:
+    wishlist: Wishlist
+    player_server: World
+    mid_mats: MaterialList
+    low_mats: MaterialList
+
+
     def __init__(self, wishlist: Wishlist):
         from .config import FLAG_PRIORITY
         self.wishlist = wishlist

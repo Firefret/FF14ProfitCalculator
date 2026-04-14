@@ -20,6 +20,8 @@ class World:
         return f"\n<World {self.name} (DC: {self.dc.name})>"
 
 
+
+
 async def fetch_data_centers(session: aiohttp.ClientSession):
     url = "https://v2.xivapi.com/api/sheet/WorldDCGroupType?fields=Name,IsCloud&limit=999"
     dc_list = list()
