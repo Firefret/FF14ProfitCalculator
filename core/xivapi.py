@@ -1,10 +1,10 @@
 from typing import TypeVar
 
+import aiohttp
+
 from .garlandTools import *
 from .itemCache import get_cached_item
 from .universalis import fetch_item_sale_data
-
-T = TypeVar("T")
 
 async def fetch_top_item_data(item_name: str, server: World) -> Item | Craftable | Marketable:
     from .garlandTools import fetch_garland_data, apply_garland_data

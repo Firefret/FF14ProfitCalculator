@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
+import aiohttp
 from .ordealList import *
 from .wishlist import Wishlist
-from .materialList import MaterialList
+
 
 @dataclass
 class Endeavor:

@@ -1,5 +1,8 @@
 from datetime import datetime
 
+import aiohttp
+
+from .gameServer import get_world_by_name
 from .itemTypes import *
 
 
@@ -56,7 +59,57 @@ def calculate_price_dynamics(sale_data) -> float:
     percent_dynamics_per_day = round(gil_dynamics_per_day / percent, 2)
     return percent_dynamics_per_day
 
-def analyze_sale_info(sale_info: dict):
+def resolve_cheapest(data: dict) -> int:
+    cheapest = 0
+    if "minListing" in data:
+        listing = data["minListing"]
+        if "world" in listing:
+            cheapest = listing["world"]["price"]
+        elif "dc" in listing:
+            cheapest = listing["dc"]["price"]
+        elif "region" in listing:
+            cheapest = listing["region"]["price"]
+    elif "recentPurchase" in data:
+        listing = data["minListing"]
+        if "world" in listing:
+            cheapest = listing["world"]["price"]
+        elif "dc" in listing:
+            cheapest = listing["dc"]["price"]
+        elif "region" in listing:
+            cheapest = listing["region"]["price"]
+    elif "averageSalePrice" in data:
+        listing = data["minListing"]
+        if "world" in listing:
+            cheapest = int(listing["world"]["price"])
+        elif "dc" in listing:
+            cheapest = int(listing["dc"]["price"])
+        elif "region" in listing:
+            cheapest = int(listing["region"]["price"])
+    else:
+        pass
+    return cheapest
+
+async def fetch_current_cheapest(item: Item, server: World, session: aiohttp.ClientSession) -> tuple[int, int]:
+    url = f"https://universalis.app/api/v2/aggregated/{server.name}/{item.id}"
+    async with session.get(url) as response:
+        if response.status == 400:
+            raise ValueError("The parameters were invalid.")
+        if response.status == 404:
+            raise ValueError(f"The world/DC or item requested is invalid (World: {server}, Item: {Item}. When requesting multiple items at once, an invalid item ID will not trigger this. Instead, the returned list of unresolved item IDs will contain the invalid item ID or IDs. Request URL: {url}")
+        response.raise_for_status()
+        data = await response.json()
+        #World > Region > DC lookup
+        nq_cheapest = 0
+        hq_cheapest = 0
+        if data["results"][0]["nq"]:
+            nq_cheapest = resolve_cheapest(data["results"][0]["nq"])
+        if data["results"][0]["hq"]:
+            hq_cheapest = resolve_cheapest(data["results"][0]["hq"])
+
+        return nq_cheapest, hq_cheapest
+
+
+def analyze_sale_info(sale_info: dict, cheapest: tuple[int, int]) -> tuple[ItemSales | None, ItemSales | None]:
     entries = sale_info["entries"]
     if len(entries) == 0:
         raise ValueError(f"No sale info for {sale_info['name']}")
@@ -67,22 +120,22 @@ def analyze_sale_info(sale_info: dict):
     if nq_data:
         nq_dynamics = calculate_price_dynamics(nq_data)
         nq_sale_velocity = sale_info["nqSaleVelocity"]
-        nq_last_sale_price = nq_data[0]["price"]
-        nq_market_data = ItemSales(nq_last_sale_price, nq_dynamics, nq_sale_velocity)
+        nq_market_data = ItemSales(cheapest[0], nq_dynamics, int(nq_sale_velocity))
 
     if hq_data:
         hq_dynamics = calculate_price_dynamics(hq_data)
         hq_sale_velocity = sale_info["hqSaleVelocity"]
-        hq_last_sale_price = hq_data[0]["price"]
-        hq_market_data = ItemSales(hq_last_sale_price, hq_dynamics, hq_sale_velocity)
+        hq_market_data = ItemSales(cheapest[1], hq_dynamics, int(hq_sale_velocity))
 
     return nq_market_data, hq_market_data
 
 async def fetch_item_sale_data(item: Item, server: World, session: aiohttp.ClientSession) -> MarketData:
     sale_info = await fetch_item_sale_history_month(item, server, session)
-    nq_market_data, hq_market_data, = analyze_sale_info(sale_info)
-
-    return MarketData(server.dc, nq_market_data, hq_market_data)
+    print(f"fetched {item.name} sale history")
+    cheapest = await fetch_current_cheapest(item, server, session)
+    nq_market_data, hq_market_data, = analyze_sale_info(sale_info, cheapest)
+    sales_data = SalesData(hq_market_data, nq_market_data)
+    return MarketData(server.dc, sales_data)
 
 def separate_ids_by_100s(item_id_list:list):
     separated_lists = []
@@ -116,7 +169,6 @@ async def get_item_listings(all_item_list: list[Item], dc: DataCenter, session: 
                                                                                       # Instead, the returned list of unresolved item IDs will contain the invalid item ID or IDs.
             if response.status != 200:
                 response.raise_for_status()
-
             listing_data = await response.json()
 
             if listing_data["unresolvedItems"]:

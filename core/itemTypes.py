@@ -1,64 +1,41 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol
+from .gameServer import DataCenter, World, World  # Explicit imports are cleaner
 
-from .gameServer import *
-
-
+# --- 1. Enums & Utility Protocols ---
 class Crafter(Enum):
-    BSM = "Smithing"
-    ARM = "Armorcraft"
-    ALC = "Alchemy"
-    GSM = "Goldsmithing"
-    WVR = "Clothcraft"
-    CUL = "Cooking"
-    CRP = "Woodworking"
-    LTW = "Leatherworking"
+    BSM, ARM, ALC, GSM, WVR, CUL, CRP, LTW = (
+        "Smithing", "Armorcraft", "Alchemy", "Goldsmithing",
+        "Clothcraft", "Cooking", "Woodworking", "Leatherworking"
+    )
 
 class Gatherer(Enum):
-    BTN = "Botanist"
-    MIN = "Miner"
-    FSH = "Fisher"
-
+    BTN, MIN, FSH = "Botanist", "Miner", "Fisher"
 
 @dataclass
-class CraftingData:
-    recipe_id: int
-    item_yield: int
-    ingredients: tuple[list[Item], list[int]]
-    craft_class: Crafter
+class SourceFlags:
+    craft: bool
+    vendor: bool
+    gather: bool
+    hunt: bool
+    market: bool
 
-class Craftable(Protocol):
-    craftable: CraftingData
-
-@dataclass
-class GatheringData:
-    gathering_type: Gatherer
-
-class Gatherable(Protocol):
-    gatherable: GatheringData
-
+# --- 2. Market & Sales Components ---
 @dataclass
 class ItemSales:
-    avg_buying_price: int | None = None #for visual purposes only, all the None fields are populated las, when universalis data is processed
+    cheapest_buying_price: int | None = None
     price_dynamics: float | None = None
-    selling_velocity: float | None = None
+    selling_velocity: int | None = None
 
 class MarketListing:
-    world: World
-    retainer_name: str
-    quantity: int
-    price: int
-    price_per_unit: int
-
     def __init__(self, world: World, retainer_name: str, quantity: int, price: int):
         self.world = world
         self.retainer_name = retainer_name
         self.quantity = quantity
         self.price = price
-        self.price_per_unit = round(self.price / self.quantity)
+        self.price_per_unit = round(self.price / self.quantity) if quantity > 0 else 0
 
     def __repr__(self):
         return f"{self.quantity} from {self.retainer_name} on {self.world.name} for {self.price}\n"
@@ -69,24 +46,17 @@ class MarketRoute:
     total_amount: int
     listings: list[MarketListing]
 
-    def __repr__(self):
-        return f"{self.total_amount} for {self.total_cost}: {self.listings}"
-
 @dataclass
 class ListingData:
-    hq: list[MarketListing | None]
-    nq: list[MarketListing | None]
-    nq_routes: list[MarketRoute | None] | None = None
-    hq_routes: list[MarketRoute | None] | None = None
-
-    def __repr__(self):
-        return f"{len(self.hq)} HQ listings and {len(self.nq)} NQ listings"
+    hq: list[MarketListing] | None = None
+    nq: list[MarketListing] | None = None
+    nq_routes: list[MarketRoute] | None = None
+    hq_routes: list[MarketRoute] | None = None
 
 @dataclass
 class SalesData:
     hq: ItemSales | None = None
     nq: ItemSales | None = None
-
 
 @dataclass
 class MarketData:
@@ -94,46 +64,47 @@ class MarketData:
     sales: SalesData | None = None
     listings: ListingData | None = None
 
-class Marketable(Protocol):
-    marketable: MarketData
+# --- 3. Source-Specific Data ---
+@dataclass
+class CraftingData:
+    recipe_id: int
+    item_yield: int
+    ingredients: tuple[list[Item], list[int]]
+    craft_class: Crafter
+
+@dataclass
+class GatheringData:
+    gathering_type: Gatherer
 
 @dataclass
 class HuntingData:
     drops_from: list[str]
-
-class Huntable(Protocol):
-    hunting: HuntingData
-
-@dataclass(frozen=True)
-class VendorListing:
-    currency: Item
-    cost: int
-    amount: int
-
-@dataclass
-class SourceFlags:
-    craft: bool
-    vendor: bool
-    gather: bool
-    hunt: bool
-    market: bool
 
 @dataclass
 class VendorData:
     listings: set[VendorListing]
     chosen_listing: tuple[str, VendorListing] | None = None
 
+    @dataclass(frozen=True)
+    class VendorListing:
+        currency: Item
+        cost: int
+        amount: int
+
     def choose_listing(self, vendor_listing: VendorListing | None) -> bool:
-        if vendor_listing in self.listings:
+        if vendor_listing and vendor_listing in self.listings:
             self.chosen_listing = (vendor_listing.currency.name, vendor_listing)
             return True
-        else:
-            return False
+        return False
 
-class Vendorable(Protocol):
-    vendorable: VendorData
+# --- 4. Protocols (Interfaces) ---
+class Craftable(Protocol): craftable: CraftingData
+class Gatherable(Protocol): gatherable: GatheringData
+class Marketable(Protocol): marketable: MarketData
+class Huntable(Protocol): huntable: HuntingData
+class Vendorable(Protocol): vendorable: VendorData
 
-
+# --- 5. The Core Entity ---
 @dataclass
 class Item:
     name: str
@@ -148,24 +119,6 @@ class Item:
     def __hash__(self) -> int:
         return hash(self.id)
 
-
-def is_craftable(item: Item) -> bool:
-    if item.craftable:
-        return True
-    else:
-        return False
-
-def is_gatherable(item: Item) -> bool:
-    if item.gatherable:
-        return True
-    else:
-        return False
-
-def is_marketable(item: Item) -> bool:
-    if item.marketable:
-        return True
-    else:
-        return False
-
-
-
+    def __eq__(self, other):
+        if not isinstance(other, Item): return False
+        return self.id == other.id

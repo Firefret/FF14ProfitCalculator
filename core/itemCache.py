@@ -8,8 +8,11 @@ class CacheEntry:
     item: Item
     garland_data: dict | None = None
 
+    def __init__(self, item: Item, garland_data = None):
+        self.item = item
+        self.garland_data = garland_data if garland_data is not None else None
 
-item_cache = {
+data = {
     "Fire Shard" : CacheEntry(Item("Fire Shard", 2, f"https://www.garlandtools.org/files/icons/item/2.png")),
     "Ice Shard" : CacheEntry(Item("Ice Shard", 3, "https://www.garlandtools.org/files/icons/item/3.png")),
     "Wind Shard": CacheEntry(Item("Wind Shard", 4, "https://www.garlandtools.org/files/icons/item/4.png")),
@@ -35,19 +38,19 @@ item_cache = {
 being_fetched: dict[str, asyncio.Task] = {}
 
 def get_cached_item(name: str) -> Item | bool:
-    if name in item_cache:
-        return item_cache[name].item
+    if name in data:
+        return data[name].item
     else:
         return False
 
 def get_cached_garland_data(name:str):
-    if name in item_cache:
-        return item_cache[name].garland_data
+    if name in data:
+        return data[name].garland_data
     else:
         return False
 
 def cache_item(item: Item, garland_data = None):
     if garland_data is None:
-        item_cache[item.name] = CacheEntry(item)
+        data[item.name] = CacheEntry(item)
     else:
-        item_cache[item.name] = CacheEntry(item, garland_data)
+        data[item.name] = CacheEntry(item, garland_data)

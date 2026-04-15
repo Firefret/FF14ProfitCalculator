@@ -1,10 +1,10 @@
 from __future__ import annotations
 from .materialList import *
-
+from .itemTypes import *
 
 class Craft:
     parent: OrdealList
-    entries: list[MarketEntry]
+    entries: list[Material]
 
     def __init__(self, parent: OrdealList):
         self.parent = parent
@@ -169,14 +169,14 @@ class Market:
 
 class VendorEntry:
     material: Material
-    listings: dict[str, VendorListing]
-    chosen_listing: tuple[str, VendorListing]
+    listings: dict[str, VendorData.VendorListing]
+    chosen_listing: tuple[str, VendorData.VendorListing]
 
     def __init__(self, mat: Material):
         self.material = mat
 
     @property
-    def listings(self) -> dict[str, VendorListing]:
+    def listings(self) -> dict[str, VendorData.VendorListing]:
         dictionary = {}
         listing_set = self.material.item.vendorable.listings
         for listing in listing_set:
@@ -187,7 +187,7 @@ class VendorEntry:
         pass
 
     @property
-    def chosen_listing(self) -> tuple[str, VendorListing]:
+    def chosen_listing(self) -> tuple[str, VendorData.VendorListing]:
         listing = self.material.item.vendorable.chosen_listing
         if listing is None:
             first_key = next(iter(self.listings))

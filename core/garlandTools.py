@@ -1,7 +1,6 @@
 import json
 
 import requests
-
 from .itemCache import *
 
 shakshouka = Item("Shakshouka", 24280, "https://www.garlandtools.org/files/icons/item/24280.png")
@@ -81,7 +80,7 @@ async def garland_fetch_mob_name(mob_id: str, session) -> str:
         if response.status != 200:
             raise ConnectionError(f"Request failed with status code {response.status}")
         garland_item = await response.json()
-    return garland_item["mob"]["name"]
+        return garland_item["mob"]["name"]
 # print(garland_fetch_mob_name("65950000005692"))
 
 
@@ -89,9 +88,9 @@ async def garland_fetch_mob_name(mob_id: str, session) -> str:
 
 async def resolve_hunting_data(garland_item: dict, session) -> HuntingData | bool:
     if "drops" in garland_item["item"]:
-        mobs = await asyncio.gather(
+        mobs = list(await asyncio.gather(
             *(garland_fetch_mob_name(id, session) for id in garland_item["item"]["drops"])
-        )
+        ))
         hunting_data = HuntingData(mobs)
         return hunting_data
     return False
@@ -99,14 +98,14 @@ async def resolve_hunting_data(garland_item: dict, session) -> HuntingData | boo
 
 
 async def resolve_vendor_listings(garland_item: dict, server, session) -> VendorData | bool:
-    from .xivapi import fetch_full_item_data
+    from core.xivapi import fetch_full_item_data
     listings = set()
 
     if "vendors" in garland_item["item"]:
         amount = 1
         currency = await fetch_full_item_data("Gil", server, session)
         cost = garland_item["item"]["price"]
-        listings.add(VendorListing(currency, cost, amount))
+        listings.add(VendorData.VendorListing(currency, cost, amount))
 
     if "tradeShops" in garland_item["item"]:
         shops = garland_item["item"]["tradeShops"]
@@ -129,7 +128,7 @@ async def resolve_vendor_listings(garland_item: dict, server, session) -> Vendor
         currencies = await asyncio.gather(*(resolve_currency(currency_id, session) for _, _, currency_id in pending))
 
         for (amount, cost, _), currency in zip(pending, currencies):
-            listings.add(VendorListing(currency, cost, amount))
+            listings.add(VendorData.VendorListing(currency, cost, amount))
 
     if len(listings) > 0:
         return VendorData(listings)
@@ -150,7 +149,7 @@ async def fetch_garland_data(item: Item, server: World, session):
         is_tradeable(garland_item),
     ]
 
-    results = await asyncio.gather(*tasks)
+    results: tuple = await asyncio.gather(*tasks)
 
 
     return {"icon": results[0],

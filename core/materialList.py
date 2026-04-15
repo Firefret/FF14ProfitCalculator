@@ -3,6 +3,9 @@ from __future__ import annotations
 import dataclasses
 import re
 from typing import TYPE_CHECKING
+
+import aiohttp
+
 from .itemCache import get_cached_garland_data
 from .universalis import get_item_listings
 from .wishlist import *
