@@ -1,5 +1,5 @@
 import math
-from .config import DEFAULT_QUALITY
+
 from .itemRequest import ItemRequest
 from .itemTypes import *
 from .xivapi import fetch_top_item_data
@@ -12,6 +12,7 @@ class WishlistEntry:
     quality: bool
 
     def __init__(self, item: Item, amount: int) -> None:
+        from core.config import DEFAULT_QUALITY
         self.item = item
         self.amount = amount
         self.quality = DEFAULT_QUALITY

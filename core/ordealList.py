@@ -12,7 +12,7 @@ class Craft:
     @property
     def entries(self)  -> list[Material]:
         mats = []
-        for mat in self.parent.mats.mid_mats.items.values():
+        for mat in self.parent.endeavor.mid_mats.items.values():
             if mat.ordeal == Ordeal.craft and mat.amount > 0:
                 mats.append(mat)
         return mats
@@ -129,7 +129,7 @@ class Market:
     @property
     def entries(self)  -> list[MarketEntry]:
         market_entries = []
-        joined_list = list(self.parent.mats.low_mats.items.values()) + list(self.parent.mats.mid_mats.items.values())
+        joined_list = list(self.parent.endeavor.low_mats.items.values()) + list(self.parent.endeavor.mid_mats.items.values())
         for mat in joined_list:
             if mat.ordeal == Ordeal.market and mat.amount > 0:
 
@@ -211,8 +211,8 @@ class Vendor:
     @property
     def entries(self) -> list[VendorEntry]:
         vendor_entries = []
-        joined_list = list(self.parent.mats.low_mats.items.values()) + list(
-            self.parent.mats.mid_mats.items.values())
+        joined_list = list(self.parent.endeavor.low_mats.items.values()) + list(
+            self.parent.endeavor.mid_mats.items.values())
         for mat in joined_list:
             if mat.ordeal == Ordeal.vendor and mat.amount > 0:
                 vendor_entry = (VendorEntry(mat))
@@ -245,7 +245,7 @@ class Gather:
     @property
     def entries(self)  -> entries[Material]:
         mats = []
-        joined_list = list(self.parent.mats.low_mats.items.values()) + list(self.parent.mats.mid_mats.items.values())
+        joined_list = list(self.parent.endeavor.low_mats.items.values()) + list(self.parent.endeavor.mid_mats.items.values())
         for mat in joined_list:
             if mat.ordeal == Ordeal.gather and mat.amount > 0:
                 mats.append(mat)
@@ -264,7 +264,7 @@ class Hunt:
     @property
     def entries(self) -> list[Material]:
         mats = []
-        joined_list = list(self.parent.mats.low_mats.items.values()) + list(self.parent.mats.mid_mats.items.values())
+        joined_list = list(self.parent.endeavor.low_mats.items.values()) + list(self.parent.endeavor.mid_mats.items.values())
         for mat in joined_list:
             if mat.ordeal == Ordeal.hunt and mat.amount > 0:
                 mats.append(mat)
@@ -282,7 +282,7 @@ class Hunt:
 @dataclass
 class OrdealList:
     from .endeavor import Endeavor
-    mats: Endeavor
+    endeavor: Endeavor
 
     craft: Craft | None = None
     market: Market | None = None
@@ -290,17 +290,17 @@ class OrdealList:
     gather: Gather | None = None
     hunt: Hunt | None = None
 
-    def __init__(self, mats: Endeavor, priority=None):
-        self.mats = mats
+    def __init__(self, endeavor: Endeavor, priority=None):
+        self.endeavor = endeavor
         if priority is None:
             from .config import FLAG_PRIORITY
             priority = FLAG_PRIORITY
 
-        for mat in (self.mats.mid_mats.items | self.mats.low_mats.items).values():
+        for mat in (self.endeavor.mid_mats.items | self.endeavor.low_mats.items).values():
             if mat.ordeal is None or not hasattr(mat, "ordeal"):
                 mat.set_default_ordeal(priority)
 
-        self.mats.recalculate_amounts()
+        self.endeavor.recalculate_amounts()
 
         self.market = Market(self)
         self.vendor = Vendor(self)
@@ -309,12 +309,12 @@ class OrdealList:
         self.craft = Craft(self)
 
     def __repr__(self):
-        self.mats.recalculate_amounts()
+        self.endeavor.recalculate_amounts()
         divider = "=" * 60
         sub_div = "-" * 60
         sections = [divider, f"{'ORDEAL LIST SUMMARY':^60}", divider,
-                    f"\nTO CRAFT (mat list length is {len(self.mats.mid_mats.items | self.mats.low_mats.items)}):"]
-        for name, entry in self.mats.wishlist.entries.items():
+                    f"\nTO CRAFT (mat list length is {len(self.endeavor.mid_mats.items | self.endeavor.low_mats.items)}):"]
+        for name, entry in self.endeavor.wishlist.entries.items():
             sections.append(f"{name} : {entry.amount:>8,}")
 
         # MARKET SECTION
@@ -353,7 +353,7 @@ class OrdealList:
 
         # CRYSTALS
         sections.append(f"\n[ CRYSTALS ]")
-        for name, mat in (self.mats.mid_mats.items|self.mats.low_mats.items).items():
+        for name, mat in (self.endeavor.mid_mats.items|self.endeavor.low_mats.items).items():
             if mat.is_crystal():
                 sections.append(f"  x{mat.amount:<4} {name}")
 

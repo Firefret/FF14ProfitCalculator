@@ -17,9 +17,9 @@ async def test_entry_point():
             return
         wishlist = core.wishlist.Wishlist({}, world)
 
-        test_requests = [ItemRequest(world, "Grade 2 Gemdraught of Intelligence", 3),
-                         ItemRequest(world, "Ra'Kaznar Ingot", 5),
-                         ItemRequest(world, "Courtly Lover's Sword", 4)
+        test_requests = [core.ItemRequest(world, "Grade 2 Gemdraught of Intelligence", 3),
+                         core.ItemRequest(world, "Ra'Kaznar Ingot", 5),
+                         core.ItemRequest(world, "Courtly Lover's Sword", 4)
                          ]
 
         # 2. You MUST await these or use gather

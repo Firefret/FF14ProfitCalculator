@@ -118,7 +118,7 @@ class Material:
         return True
 
     def set_quality(self, quality=None) -> bool:
-        from config import DEFAULT_QUALITY
+        from core.config import DEFAULT_QUALITY
         if quality is None:  # this sets default or the other one available
             quality = DEFAULT_QUALITY
 
