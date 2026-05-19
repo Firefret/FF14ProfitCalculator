@@ -152,7 +152,10 @@ class Market:
         pass
 
     @property
-    def route(self):
+    def route(self) -> dict[str, dict[str, list[MarketListing]]]:
+        """Returns a dict of world_name: dict{item_name: list[MarketListing]}
+        Which describ es the order of world visits, and exact listings of each item
+        to purchase there"""
         dictionary = {}
         for market_entry in self.entries:
             for listing in market_entry.route.listings:
@@ -364,5 +367,4 @@ class OrdealList:
 
 
 
-#todo: continue here
 
