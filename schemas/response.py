@@ -198,6 +198,7 @@ class Wishlist(BaseModel):
     class Entry(BaseModel):
         item: Item  # Keeps top level wishlist targets clean but loaded
         amount: int
+        quality: bool
         model_config = ConfigDict(from_attributes=True, title="response.Wishlist.Entry")
 
     entries: dict[str, Entry]

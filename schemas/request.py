@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 class ItemEntry(BaseModel):
     name: str
     amount: int
+    quality: bool
     model_config = ConfigDict(title="request.ItemEntry")
 
 class Body(BaseModel):

@@ -119,7 +119,7 @@ async def new_endeavor(data: schemas.request.Body):
         wishlist = core.wishlist.Wishlist({}, world)
         requests = []
         for entry in data.items:
-            requests.append(core.ItemRequest(world, entry.name, entry.amount))
+            requests.append(core.ItemRequest(world, entry.name, entry.amount, entry.quality))
 
         # 2. You MUST await these or use gather
         tasks = [wishlist.process_request(req) for req in requests]

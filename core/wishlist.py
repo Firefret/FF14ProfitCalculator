@@ -11,11 +11,11 @@ class WishlistEntry:
     amount: int
     quality: bool
 
-    def __init__(self, item: Item, amount: int) -> None:
+    def __init__(self, item: Item, amount: int, quality: bool) -> None:
         from core.config import DEFAULT_QUALITY
         self.item = item
         self.amount = amount
-        self.quality = DEFAULT_QUALITY
+        self.quality = quality # todo: this should be set by user, got in an api request
 
 
 @dataclass
@@ -32,7 +32,7 @@ class Wishlist:
     async def process_request(self, request: ItemRequest):
         item = await fetch_top_item_data(request.item_name, request.server)
         amount_of_crafts = math.ceil(request.quantity / item.craftable.item_yield)
-        wishlist_entry = WishlistEntry(item, amount_of_crafts)
+        wishlist_entry = WishlistEntry(item, amount_of_crafts, request.quality)
         self.add(wishlist_entry)
 
     @property
