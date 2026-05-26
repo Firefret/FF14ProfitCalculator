@@ -4,11 +4,28 @@ import aiohttp
 
 from .gameServer import get_world_by_name
 from .itemTypes import *
-
+from pathlib import Path
+import json
 
 #need to get sale data to calculate only the income from selling the top item
 
+def save_raw_response_log(data: dict, filename: str = "universalis_response_debug.json"):
+    """
+    Safely saves the API response to a file in a local 'logs' directory.
+    Handles folder creation automatically.
+    """
+    try:
+        # Create a 'logs' directory relative to the current working directory if it doesn't exist
+        log_dir = Path.cwd() / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
 
+        file_path = log_dir / filename
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        print(f"[DEBUG LOG] Successfully saved raw response to: {file_path}")
+    except Exception as e:
+        print(f"[DEBUG LOG ERROR] Failed to save log file: {e}")
 
 #this one will use world name as you can't sell on other worlds
 async def fetch_item_sale_history_month(item: Item, server: World, session: aiohttp.ClientSession):
@@ -152,31 +169,54 @@ def separate_ids_by_100s(item_id_list:list):
 
     return separated_lists
 
-async def get_item_listings(all_item_list: list[Item], dc: DataCenter, session: aiohttp.ClientSession) -> list[ListingData]:
+
+async def get_item_listings(all_item_list: list['Item'], dc: 'DataCenter', session: aiohttp.ClientSession) -> list[
+    'ListingData']:
     item_ids = list(map(lambda item: item.id, all_item_list))
-    item_lists = separate_ids_by_100s(item_ids) # Universalis can accept 100 IDs at once, so we'll do it by 100's
+    item_lists = separate_ids_by_100s(item_ids)
     final_result = []
+
     for item_list in item_lists:
         item_list_copy = item_list.copy()
         id_string = ",".join(map(str, item_list))
         print(f"id_string = {id_string}")
+
         url = f"https://universalis.app/api/v2/{dc.name}/{id_string}?entries=0"
         async with session.get(url) as response:
             if response.status == 400:
                 raise ValueError(f"400: The parameters are invalid")
             if response.status == 404:
-                raise ValueError(f"404: The world/DC or item requested is invalid.")  # When requesting multiple items at once, an invalid item ID will not trigger this.
-                                                                                      # Instead, the returned list of unresolved item IDs will contain the invalid item ID or IDs.
+                raise ValueError(f"404: The world/DC or item requested is invalid.")
             if response.status != 200:
                 response.raise_for_status()
-            listing_data = await response.json()
 
-            if listing_data["unresolvedItems"]:
-                raise ValueError(f"Some items were unresolved: {listing_data['unresolvedItems']}")
+            raw_json = await response.json()
 
-            for item_id, listing_data in listing_data["items"].items():
-                item_index = item_list_copy.index(int(item_id)) # get the index of the item we are inspecting the listings of, because the response item order is random
-                listings = listing_data["listings"]
+            # --- SAFEGUARD: LOGGING RAW DATA ---
+            save_raw_response_log(raw_json)
+            # -----------------------------------
+
+            # --- DETECT AND NORMALIZE SINGLE ITEM VS MULTI-ITEM ---
+            if "items" in raw_json:
+                # Scenario A: Multi-item response
+                items_dict = raw_json["items"]
+
+                # Check for unresolved items only if the field exists
+                if "unresolvedItems" in raw_json and len(raw_json["unresolvedItems"]) > 0:
+                    unresolved = raw_json["unresolvedItems"]
+                    raise ValueError(f"Some items were unresolved: {unresolved}")
+            else:
+                # Scenario B: Single-item response (Flattened layout)
+                # We extract the itemID from the root, stringify it to match JSON key standards,
+                # and wrap the raw_json payload to mirror the multi-item structure.
+                single_item_id = str(raw_json.get("itemID", item_list[0]))
+                items_dict = {single_item_id: raw_json}
+            # -----------------------------------------------------
+
+            # Now this loop runs perfectly uniform whether you requested 1 item or 100
+            for item_id, item_data in items_dict.items():
+                item_index = item_list_copy.index(int(item_id))
+                listings = item_data.get("listings", [])
                 hq = []
                 nq = []
 
@@ -193,13 +233,10 @@ async def get_item_listings(all_item_list: list[Item], dc: DataCenter, session: 
 
                 item_list_copy[item_index] = ListingData(hq, nq)
 
-                #create arrays for marketboard ordeal routes
-                hq_amount = 0
-                nq_amount = 0
-                for listing in item_list_copy[item_index].hq:
-                    hq_amount += listing.quantity
-                for listing in item_list_copy[item_index].nq:
-                    nq_amount += listing.quantity
+                # Create arrays for marketboard ordeal routes
+                hq_amount = sum(listing.quantity for listing in item_list_copy[item_index].hq)
+                nq_amount = sum(listing.quantity for listing in item_list_copy[item_index].nq)
+
                 item_list_copy[item_index].nq_routes = [None] * nq_amount
                 item_list_copy[item_index].hq_routes = [None] * hq_amount
 
