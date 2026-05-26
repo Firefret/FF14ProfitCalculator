@@ -4,6 +4,7 @@ import asyncio
 import aiohttp
 from fastapi.openapi.utils import get_openapi
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 async def test_entry_point():
 
@@ -56,6 +57,10 @@ async def test_entry_point():
 
 
 app = FastAPI()
+origins = [
+    "http://localhost:63343"
+    "http://127.0.0.1:63343",
+]
 
 
 def custom_openapi():
@@ -131,4 +136,12 @@ async def new_endeavor(data: schemas.request.Body):
 
 
         return schemas.response.OrdealList.model_validate(ordeal_list)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows any origin during debugging
+    allow_credentials=False, # Crucial: Must be False if allow_origins is ["*"]
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
