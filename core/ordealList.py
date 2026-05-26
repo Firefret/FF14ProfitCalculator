@@ -154,7 +154,7 @@ class Market:
     @property
     def route(self) -> dict[str, dict[str, list[MarketListing]]]:
         """Returns a dict of world_name: dict{item_name: list[MarketListing]}
-        Which describ es the order of world visits, and exact listings of each item
+        Which describes the order of world visits, and exact listings of each item
         to purchase there"""
         dictionary = {}
         for market_entry in self.entries:
