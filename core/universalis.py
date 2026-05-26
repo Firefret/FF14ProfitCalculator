@@ -155,29 +155,21 @@ async def fetch_item_sale_data(item: Item, server: World, session: aiohttp.Clien
     return MarketData(server.dc, sales_data)
 
 def separate_ids_by_100s(item_id_list:list):
-    separated_lists = []
-    temp_list = []
-
-    while item_id_list:
-        if len(temp_list) == 100:
-            separated_lists.append(temp_list)
-            temp_list = []
-
-        temp_list.append(item_id_list.pop(0))
-    if temp_list:
-        separated_lists.append(temp_list)
-
-    return separated_lists
+    return [item_id_list[i:i + 100] for i in range(0, len(item_id_list), 100)]
 
 
 async def get_item_listings(all_item_list: list['Item'], dc: 'DataCenter', session: aiohttp.ClientSession) -> list[
     'ListingData']:
-    item_ids = list(map(lambda item: item.id, all_item_list))
+    # Pure extraction to a new list variable
+    item_ids = [item.id for item in all_item_list]
     item_lists = separate_ids_by_100s(item_ids)
     final_result = []
 
     for item_list in item_lists:
-        item_list_copy = item_list.copy()
+        # Create an explicit list of None references to hold results by precise index offset.
+        # This prevents .index() crashes if we alter elements mid-loop.
+        chunk_results = [None] * len(item_list)
+
         id_string = ",".join(map(str, item_list))
         print(f"id_string = {id_string}")
 
@@ -198,24 +190,26 @@ async def get_item_listings(all_item_list: list['Item'], dc: 'DataCenter', sessi
 
             # --- DETECT AND NORMALIZE SINGLE ITEM VS MULTI-ITEM ---
             if "items" in raw_json:
-                # Scenario A: Multi-item response
                 items_dict = raw_json["items"]
-
-                # Check for unresolved items only if the field exists
                 if "unresolvedItems" in raw_json and len(raw_json["unresolvedItems"]) > 0:
                     unresolved = raw_json["unresolvedItems"]
                     raise ValueError(f"Some items were unresolved: {unresolved}")
             else:
-                # Scenario B: Single-item response (Flattened layout)
-                # We extract the itemID from the root, stringify it to match JSON key standards,
-                # and wrap the raw_json payload to mirror the multi-item structure.
                 single_item_id = str(raw_json.get("itemID", item_list[0]))
                 items_dict = {single_item_id: raw_json}
             # -----------------------------------------------------
 
-            # Now this loop runs perfectly uniform whether you requested 1 item or 100
             for item_id, item_data in items_dict.items():
-                item_index = item_list_copy.index(int(item_id))
+                # Defend against duplicate IDs by finding the first unpopulated slot matching this ID
+                try:
+                    item_index = next(
+                        i for i, uid in enumerate(item_list)
+                        if uid == int(item_id) and chunk_results[i] is None
+                    )
+                except StopIteration:
+                    # Fallback if all matching slots are somehow filled
+                    item_index = item_list.index(int(item_id))
+
                 listings = item_data.get("listings", [])
                 hq = []
                 nq = []
@@ -231,16 +225,27 @@ async def get_item_listings(all_item_list: list['Item'], dc: 'DataCenter', sessi
                     else:
                         nq.append(market_listing)
 
-                item_list_copy[item_index] = ListingData(hq, nq)
+                # Initialize the object layout
+                listing_obj = ListingData(hq, nq)
 
-                # Create arrays for marketboard ordeal routes
-                hq_amount = sum(listing.quantity for listing in item_list_copy[item_index].hq)
-                nq_amount = sum(listing.quantity for listing in item_list_copy[item_index].nq)
+                # Run the math safely on the local objects we JUST built,
+                # instead of looking up the array element where a None reference could hide
+                hq_amount = sum(listing.quantity for listing in listing_obj.hq)
+                nq_amount = sum(listing.quantity for listing in listing_obj.nq)
 
-                item_list_copy[item_index].nq_routes = [None] * nq_amount
-                item_list_copy[item_index].hq_routes = [None] * hq_amount
+                listing_obj.nq_routes = [None] * nq_amount
+                listing_obj.hq_routes = [None] * hq_amount
 
-        final_result = [*final_result, *item_list_copy]
+                # Assign the fully constructed data stack safely to the target index slot
+                chunk_results[item_index] = listing_obj
+
+                # Fill any gaps where an item was completely missing from Universalis' registry
+                # with empty ListingData so your downstream properties don't crash
+            for i in range(len(chunk_results)):
+                if chunk_results[i] is None:
+                    chunk_results[i] = ListingData([], [])
+
+            final_result.extend(chunk_results)
 
     return final_result
 

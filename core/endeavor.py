@@ -156,23 +156,17 @@ class Endeavor:
         new_top_entries = [entry for name, entry in self.wishlist.entries.items() if name in addition_names]
 
         for entry in new_top_entries:
-            # This only builds the dictionary keys for things we haven't seen
             newly_discovered = self.recursive_mat_sweep_and_add(entry.item, 0, FLAG_PRIORITY)
             all_new_names.update(newly_discovered)
 
-        # 3. Fetch Listings: Refresh prices for the whole list
-        # We refresh everything so your 'is_enough_nq/hq' checks are accurate
-        await self.mid_mats.fetch_and_apply_market_listings(dc, session)
-        await self.low_mats.fetch_and_apply_market_listings(dc, session)
+        # 3. Fetch Listings: Call the native method, but pass low_mats to batch them together!
+        await self.mid_mats.fetch_and_apply_market_listings(dc, session, sister_lists=[self.low_mats])
 
         # 4. Set Default Ordeals: ONLY for the items marked as new
         for name in all_new_names:
             mat = self.mid_mats.items.get(name) or self.low_mats.items.get(name)
             if mat:
-                # Material.set_default_ordeal now has the 'if self.ordeal is not None' guard
                 mat.set_default_ordeal(FLAG_PRIORITY)
 
         # 5. Recalculate: Distribute amounts based on the recipe tree
-        # Since ordeals are now "locked" (old ones kept, new ones set),
-        # this will correctly stop at market-bought mid-mats.
         self.recalculate_amounts()

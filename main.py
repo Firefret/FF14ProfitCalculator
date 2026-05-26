@@ -127,10 +127,19 @@ async def new_endeavor(data: schemas.request.Body):
         # 3. Now the shopping list will actually have data
         new_endeavor: Endeavor = core.Endeavor(wishlist)
 
-        # this is a weird place to put market listing fetch in but it's the earliest we get a list of all mats, and universalis api needs a list of item IDs
-        # i could do it one-by-one async, but ratelimit is 30req\s and i would really rather not tackle throttling
-        await new_endeavor.low_mats.fetch_and_apply_market_listings(world.dc, session)
-        await new_endeavor.mid_mats.fetch_and_apply_market_listings(world.dc, session)
+        # Unified single network trip to populate market listings for both tiers at once
+        await new_endeavor.mid_mats.fetch_and_apply_market_listings(
+            world.dc,
+            session,
+            sister_lists=[new_endeavor.low_mats]
+        )
+
+        # Apply default ordeals and run the math pass now that market data exists
+        from core.config import FLAG_PRIORITY
+        for mat in list(new_endeavor.mid_mats.items.values()) + list(new_endeavor.low_mats.items.values()):
+            mat.set_default_ordeal(FLAG_PRIORITY)
+
+        new_endeavor.recalculate_amounts()
 
         ordeal_list = core.OrdealList(new_endeavor)
 

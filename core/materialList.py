@@ -29,8 +29,8 @@ class Material:
     ordeal: Ordeal | None = None
     quality: bool | None = None
     parent: MaterialList | None = None
-    is_enough_hq: bool
-    is_enough_nq: bool
+    is_enough_hq: bool = False
+    is_enough_nq: bool = False
 
     def __init__(self, item: Item, amount: int, parent=None):
         self.item = item
@@ -78,30 +78,6 @@ class Material:
             if value:
                 ordeals.append(Ordeal(flag))
         return ordeals
-
-    @property
-    def is_enough_nq(self) -> bool:
-        amount_needed = self.amount
-        nq_amount = 0
-        is_nq_enough = False
-        for listing in self.item.marketable.listings.nq:
-            nq_amount += listing.quantity
-            if nq_amount >= amount_needed:
-                is_nq_enough = True
-                break
-        return is_nq_enough
-
-    @property
-    def is_enough_hq(self) -> bool:
-        amount_needed = self.amount
-        hq_amount = 0
-        is_hq_enough = False
-        for listing in self.item.marketable.listings.hq:
-            hq_amount += listing.quantity
-            if hq_amount >= amount_needed:
-                is_hq_enough = True
-                break
-        return is_hq_enough
 
     def available_amount_handler(self, priority=None):  # checks if there's enough nq or hq mats, if not,
         if not self.is_enough_nq and not self.is_enough_hq:
@@ -157,6 +133,24 @@ class Material:
 
         return flags
 
+    def check_market_availability(self):
+        """
+        Call this ONCE right after listings are fetched.
+        Scans the database collections exactly once to populate stable flags.
+        """
+        if not self.item.marketable or not self.item.marketable.listings:
+            self.is_enough_nq = False
+            self.is_enough_hq = False
+            return
+
+        # Calculate NQ Availability
+        nq_total = sum(listing.quantity for listing in self.item.marketable.listings.nq)
+        self.is_enough_nq = nq_total >= self.amount
+
+        # Calculate HQ Availability
+        hq_total = sum(listing.quantity for listing in self.item.marketable.listings.hq)
+        self.is_enough_hq = hq_total >= self.amount
+
 
 @dataclass
 class MaterialList:
@@ -166,23 +160,59 @@ class MaterialList:
     def __init__(self, items: dict[str, Material]):
         self.items = items
 
-    async def fetch_and_apply_market_listings(self, dc: DataCenter, session: aiohttp.ClientSession):
-        # get a list of all tradeable mats
-        item_list = []
+    def _get_tradeable_items(self) -> list[Item]:
+        """Helper to filter out only tradeable items from this list."""
+        tradeable = []
         for name, mat in self.items.items():
             garland_data = get_cached_garland_data(name)
-            if garland_data is None:
-                print(f"No garland_data for {name}")
-                continue
-            if garland_data["is_tradeable"]:
-                item_list.append(mat.item)
+            if garland_data and garland_data.get("is_tradeable"):
+                tradeable.append(mat.item)
             else:
-                print(f"{name} does not seem to be tradeable, garlandData view: {garland_data}")
-        listings = await get_item_listings(item_list, dc, session)
-        for index, item in enumerate(item_list):
+                print(f"[DEBUG] {name} is not tradeable or missing garland data.")
+        return tradeable
+
+    async def fetch_and_apply_market_listings(self, dc: DataCenter, session: aiohttp.ClientSession,
+                                              sister_lists: list[MaterialList] = None):
+        """
+        Fetches market data from Universalis. Accepts an optional list of sister MaterialLists
+        to batch everything into a single network request, preventing single-item API failures.
+        """
+        sister_lists = sister_lists or []
+
+        # 1. Gather tradeable items from this list
+        my_items = self._get_tradeable_items()
+
+        # 2. Gather tradeable items from all sister lists, tracking where they came from
+        sister_items_map = []
+        combined_item_list = list(my_items)
+
+        for s_list in sister_lists:
+            s_items = s_list._get_tradeable_items()
+            sister_items_map.append((s_list, s_items))
+            combined_item_list.extend(s_items)
+
+        if not combined_item_list:
+            return
+
+        # 3. Fire a single, grouped network batch request
+        listings = await get_item_listings(combined_item_list, dc, session)
+
+        # 4. Map the results back to this list
+        for index, item in enumerate(my_items):
             mat = self.items[item.name]
-            market_data = MarketData(dc=dc, listings=listings[index])
-            mat.item.marketable = market_data
+            mat.item.marketable = MarketData(dc=dc, listings=listings[index])
+            if hasattr(mat, 'check_market_availability'):
+                mat.check_market_availability()
+
+        # 5. Map the results back to the sister lists using index offsets
+        current_offset = len(my_items)
+        for s_list, s_items in sister_items_map:
+            for index, item in enumerate(s_items):
+                mat = s_list.items[item.name]
+                mat.item.marketable = MarketData(dc=dc, listings=listings[current_offset + index])
+                if hasattr(mat, 'check_market_availability'):
+                    mat.check_market_availability()
+            current_offset += len(s_items)
 
     def add(self, mat: Material, amount=None):
         if mat in self.items.values():
