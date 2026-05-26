@@ -84,7 +84,7 @@ class FullMarketData(SharedMarketData):
         price_per_unit: int
         model_config = ConfigDict(from_attributes=True, title="response.Item.Market.MarketListing")
 
-        @model_validator(mode="before")
+        '''@model_validator(mode="before")
         @classmethod
         def debug_input_object(cls, data):
             """
@@ -101,6 +101,8 @@ class FullMarketData(SharedMarketData):
             logger.warning(f"Pydantic is processing MarketListing object: {data}")
 
             return data
+            '''
+
 
     class ListingData(BaseModel):
         """Two instances of MarketListing, each for HQ and LQ item variants"""
