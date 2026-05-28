@@ -39,6 +39,10 @@ class Wishlist:
     server: World
 
     def add(self, entry: WishlistEntry):
+        #for two wishlist entries with the same name but
+        #different qualities to exist is impossible with the current
+        #implementation, and is to much of a hassle for me to dig through.
+        #user shouldn't be allowed to do that from the frontend
         if entry.item.name not in self.entries:
             self.entries[entry.item.name] = entry
         else:
