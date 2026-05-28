@@ -12,7 +12,7 @@ class WishlistEntry:
     quality: bool
 
     def __init__(self, item: Item, amount: int, quality: bool) -> None:
-        from core.config import DEFAULT_QUALITY
+        from core.config import DEFAULT_QUALITY #isn't needed anymore, quality is set in request
         self.item = item
         self.amount = amount
         self.quality = quality # todo: this should be set by user, got in an api request
