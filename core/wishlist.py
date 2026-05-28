@@ -1,5 +1,5 @@
+from __future__ import annotations
 import math
-
 from .itemRequest import ItemRequest
 from .itemTypes import *
 from .xivapi import fetch_top_item_data
@@ -17,6 +17,21 @@ class WishlistEntry:
         self.amount = amount
         self.quality = quality # todo: this should be set by user, got in an api request
 
+    def __add__(self, other: WishlistEntry):
+        if self.item.id != other.item.id:
+            raise ValueError(f"Cannot add different items: {self.item.name} and {other.item.name}")
+
+        self.amount += other.amount
+        return self
+
+    def __iadd__(self, other: WishlistEntry):
+        if self.item.id != other.item.id:
+            raise ValueError(f"Cannot add different items: {self.item.name} and {other.item.name}")
+
+        self.amount += other.amount
+        return self
+
+
 
 @dataclass
 class Wishlist:
@@ -27,7 +42,7 @@ class Wishlist:
         if entry.item.name not in self.entries:
             self.entries[entry.item.name] = entry
         else:
-            self.entries[entry.item.name].amount += entry
+            self.entries[entry.item.name] += entry
 
     async def process_request(self, request: ItemRequest):
         item = await fetch_top_item_data(request.item_name, request.server)
