@@ -4,9 +4,12 @@ import aiohttp
 
 
 class DataCenter:
-    def __init__(self, name: str):
+    def __init__(self, name: str, worlds:list[World] = None):
         self.name = name
-        self.worlds: list[World] = []  # Map of Name -> World Object
+        if worlds is None:
+            self.worlds: list[World] = []  # Map of Name -> World Object
+        else:
+            self.worlds = worlds
 
     def __repr__(self):
         return f"\n<DataCenter {self.name}>"

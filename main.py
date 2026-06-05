@@ -1,3 +1,5 @@
+from starlette.responses import HTMLResponse
+
 import core
 import schemas
 import asyncio
@@ -105,6 +107,43 @@ app.openapi = custom_openapi
 @app.get("/")
 async def read_root():
     return {"message": "Hello World"}
+
+@app.get("/worlds", response_model=schemas.response.AllDataCenters)
+async def get_worlds():
+    class AllDataCenters:
+        def __init__(self, datacenters: list[core.gameServer.DataCenter]):
+            self.datacenters = datacenters
+
+    def check_english_and_capital(text):
+        if not text:
+            return False  # Handles empty strings safely
+
+        # 1. Check if the string is English (ASCII)
+        is_english = text.isascii()
+
+        # 2. Check if the first character is an uppercase letter
+        is_capital = text[0].isupper()
+
+        return is_english and is_capital
+
+    _ , alldatacenters = await core.gameServer.form_game_server_info();
+
+    filtered_datacenters = []
+    for datacenter in alldatacenters:
+        if check_english_and_capital(datacenter.name) and len(datacenter.worlds) > 0:
+            filtered_worlds = []
+            for world in datacenter.worlds:
+                if check_english_and_capital(world.name):
+                    filtered_worlds.append(world)
+            if len(filtered_worlds) > 0:
+                filtered_dc = core.gameServer.DataCenter(datacenter.name, filtered_worlds)
+            else:
+                continue
+            filtered_datacenters.append(filtered_dc)
+
+    instance = AllDataCenters(filtered_datacenters)
+    return schemas.response.AllDataCenters.model_validate(instance)
+
 
 @app.post("/newendeavor", response_model=schemas.response.OrdealList, responses={400: {"description": "Invalid server name"},
                                            401: {"description": "Invalid item name"},})

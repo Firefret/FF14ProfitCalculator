@@ -21,6 +21,10 @@ class DataCenter(BaseModel):
     worlds: list[World]
     model_config = ConfigDict(from_attributes=True, title="response.DataCenter")
 
+class AllDataCenters(BaseModel):
+    """Returns a list of all DataCenters"""
+    datacenters: list[DataCenter]
+    model_config = ConfigDict(from_attributes=True, title="response.World")
 
 class SourceFlags(BaseModel):
     """Ordeals, that can be assigned to a Material"""
